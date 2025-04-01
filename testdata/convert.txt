@@ -1,0 +1,31 @@
+cd ${PKG_ROOT}
+go run ${WORK}/main.go
+cd ${WORK}
+cmp stdout want.txt
+
+-- main.go --
+package main
+
+import . "github.com/efd6/dispear"
+
+func main() {
+	DESCRIPTION("convert")
+
+	CONVERT("", "src", "long")
+	CONVERT("dst", "src", "long")
+
+	Generate()
+}
+-- want.txt --
+---
+description: convert
+processors:
+  - convert:
+      tag: convert_src_to_long
+      field: src
+      type: long
+  - convert:
+      tag: convert_src_to_long_into_dst
+      field: src
+      type: long
+      target_field: dst

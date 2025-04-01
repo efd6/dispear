@@ -1,0 +1,26 @@
+cd ${PKG_ROOT}
+go run ${WORK}/main.go
+cd ${WORK}
+cmp stdout want.txt
+
+-- main.go --
+package main
+
+import . "github.com/efd6/dispear"
+
+func main() {
+	DESCRIPTION("geo_grid")
+
+	GEO_GRID("", "src", "typ").CHILDREN_FIELD("child")
+
+	Generate()
+}
+-- want.txt --
+---
+description: geo_grid
+processors:
+  - geo_grid:
+      tag: geo_grid_src_as_typ
+      field: src
+      tile_type: typ
+      children_field: child

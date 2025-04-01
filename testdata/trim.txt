@@ -1,0 +1,25 @@
+cd ${PKG_ROOT}
+go run ${WORK}/main.go
+cd ${WORK}
+cmp stdout want.txt
+
+-- main.go --
+package main
+
+import . "github.com/efd6/dispear"
+
+func main() {
+	DESCRIPTION("trim")
+
+	TRIM("dst", "src")
+
+	Generate()
+}
+-- want.txt --
+---
+description: trim
+processors:
+  - trim:
+      tag: trim_src_into_dst
+      field: src
+      target_field: dst

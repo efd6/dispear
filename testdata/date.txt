@@ -1,0 +1,28 @@
+cd ${PKG_ROOT}
+go run ${WORK}/main.go
+cd ${WORK}
+cmp stdout want.txt
+
+-- main.go --
+package main
+
+import . "github.com/efd6/dispear"
+
+func main() {
+	DESCRIPTION("date")
+
+	DATE("", "src", "one", "two", "three")
+
+	Generate()
+}
+-- want.txt --
+---
+description: date
+processors:
+  - date:
+      tag: date_src
+      field: src
+      formats:
+        - one
+        - two
+        - three

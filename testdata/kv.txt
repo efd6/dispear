@@ -1,0 +1,27 @@
+cd ${PKG_ROOT}
+go run ${WORK}/main.go
+cd ${WORK}
+cmp stdout want.txt
+
+-- main.go --
+package main
+
+import . "github.com/efd6/dispear"
+
+func main() {
+	DESCRIPTION("kv")
+
+	KV("dst", "src", ",", ":")
+
+	Generate()
+}
+-- want.txt --
+---
+description: kv
+processors:
+  - kv:
+      tag: kv_src_into_dst
+      field: src
+      target_field: dst
+      field_split: ','
+      value_split: ':'

@@ -1,0 +1,35 @@
+cd ${PKG_ROOT}
+go run ${WORK}/main.go
+cd ${WORK}
+cmp stdout want.txt
+
+-- main.go --
+package main
+
+import . "github.com/efd6/dispear"
+
+func main() {
+	DESCRIPTION("sort")
+
+	SORT("", "src", "")
+	SORT("", "src", "asc")
+	SORT("dst", "src", "asc")
+
+	Generate()
+}
+-- want.txt --
+---
+description: sort
+processors:
+  - sort:
+      tag: sort_src
+      field: src
+  - sort:
+      tag: sort_src_asc
+      field: src
+      order: asc
+  - sort:
+      tag: sort_src_into_dst_asc
+      field: src
+      target_field: dst
+      order: asc

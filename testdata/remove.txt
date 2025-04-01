@@ -1,0 +1,41 @@
+cd ${PKG_ROOT}
+go run ${WORK}/main.go
+cd ${WORK}
+cmp stdout want.txt
+
+-- main.go --
+package main
+
+import . "github.com/efd6/dispear"
+
+func main() {
+	DESCRIPTION("remove")
+
+	REMOVE("field1", "field2")
+	REMOVE("field1", "field2").KEEP("field3", "field4")
+	REMOVE().KEEP("field3", "field4")
+
+	Generate()
+}
+-- want.txt --
+---
+description: remove
+processors:
+  - remove:
+      tag: remove_1
+      field:
+        - field1
+        - field2
+  - remove:
+      tag: remove_2
+      field:
+        - field1
+        - field2
+      keep:
+        - field3
+        - field4
+  - remove:
+      tag: remove_3
+      keep:
+        - field3
+        - field4

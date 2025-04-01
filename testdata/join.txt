@@ -1,0 +1,31 @@
+cd ${PKG_ROOT}
+go run ${WORK}/main.go
+cd ${WORK}
+cmp stdout want.txt
+
+-- main.go --
+package main
+
+import . "github.com/efd6/dispear"
+
+func main() {
+	DESCRIPTION("join")
+
+	JOIN("geo", "ip", "-")
+	JOIN("", "ip", "-")
+
+	Generate()
+}
+-- want.txt --
+---
+description: join
+processors:
+  - join:
+      tag: join_ip_into_geo
+      field: ip
+      separator: '-'
+      target_field: geo
+  - join:
+      tag: join_ip
+      field: ip
+      separator: '-'

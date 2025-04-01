@@ -1,0 +1,37 @@
+cd ${PKG_ROOT}
+go run ${WORK}/main.go
+cd ${WORK}
+cmp stdout want.txt
+
+-- main.go --
+package main
+
+import . "github.com/efd6/dispear"
+
+func main() {
+	DESCRIPTION("reroute")
+
+	REROUTE("ns", "ds", "")
+	REROUTE("ns", "", "")
+	REROUTE("", "ds", "")
+	REROUTE("", "", "dst")
+
+	Generate()
+}
+-- want.txt --
+---
+description: reroute
+processors:
+  - reroute:
+      tag: reroute_to_ns_ds
+      namespace: ns
+      dataset: ds
+  - reroute:
+      tag: reroute_to_ns
+      namespace: ns
+  - reroute:
+      tag: reroute_to_ds
+      dataset: ds
+  - reroute:
+      tag: reroute_to_dst
+      destination: dst

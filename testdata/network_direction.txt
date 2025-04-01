@@ -1,0 +1,29 @@
+cd ${PKG_ROOT}
+go run ${WORK}/main.go
+cd ${WORK}
+cmp stdout want.txt
+
+-- main.go --
+package main
+
+import . "github.com/efd6/dispear"
+
+func main() {
+	DESCRIPTION("network_direction")
+
+	NETWORK_DIRECTION("dst", "src.ip", "dst.ip").INTERNAL_NETWORKS("local", "network")
+
+	Generate()
+}
+-- want.txt --
+---
+description: network_direction
+processors:
+  - network_direction:
+      tag: network_direction_into_dst
+      target_field: dst
+      source_ip: src.ip
+      destination_ip: dst.ip
+      internal_networks:
+        - local
+        - network

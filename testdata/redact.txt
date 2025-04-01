@@ -1,0 +1,28 @@
+cd ${PKG_ROOT}
+go run ${WORK}/main.go
+cd ${WORK}
+cmp stdout want.txt
+
+-- main.go --
+package main
+
+import . "github.com/efd6/dispear"
+
+func main() {
+	DESCRIPTION("redact")
+
+	REDACT("src.password", "password:").SKIP_IF_UNLICENSED(true).TRACE_REDACT(true)
+
+	Generate()
+}
+-- want.txt --
+---
+description: redact
+processors:
+  - redact:
+      tag: redact_src_password
+      field: src.password
+      patterns:
+        - 'password:'
+      skip_if_unlicensed: true
+      trace_redact: true

@@ -1,0 +1,26 @@
+cd ${PKG_ROOT}
+go run ${WORK}/main.go
+cd ${WORK}
+cmp stdout want.txt
+
+-- main.go --
+package main
+
+import . "github.com/efd6/dispear"
+
+func main() {
+	DESCRIPTION("bytes")
+
+	BYTES("binary", "src").IGNORE_MISSING(true)
+
+	Generate()
+}
+-- want.txt --
+---
+description: bytes
+processors:
+  - bytes:
+      tag: bytes_src_into_binary
+      field: src
+      target_field: binary
+      ignore_missing: true

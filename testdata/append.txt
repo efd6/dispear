@@ -1,0 +1,27 @@
+cd ${PKG_ROOT}
+go run ${WORK}/main.go
+cd ${WORK}
+cmp stdout want.txt
+
+-- main.go --
+package main
+
+import . "github.com/efd6/dispear"
+
+func main() {
+	DESCRIPTION("append")
+
+	ATTACHMENT("", "src").PROPERTIES("content", "title")
+
+	Generate()
+}
+-- want.txt --
+---
+description: append
+processors:
+  - attachment:
+      tag: attachment_src
+      field: src
+      properties:
+        - content
+        - title

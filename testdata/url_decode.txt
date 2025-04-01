@@ -1,0 +1,25 @@
+cd ${PKG_ROOT}
+go run ${WORK}/main.go
+cd ${WORK}
+cmp stdout want.txt
+
+-- main.go --
+package main
+
+import . "github.com/efd6/dispear"
+
+func main() {
+	DESCRIPTION("url_decode")
+
+	URL_DECODE("url", "src")
+
+	Generate()
+}
+-- want.txt --
+---
+description: url_decode
+processors:
+  - urldecode:
+      tag: urldecode_src_into_url
+      field: src
+      target_field: url

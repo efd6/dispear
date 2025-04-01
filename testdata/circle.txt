@@ -1,0 +1,28 @@
+cd ${PKG_ROOT}
+go run ${WORK}/main.go
+cd ${WORK}
+cmp stdout want.txt
+
+-- main.go --
+package main
+
+import . "github.com/efd6/dispear"
+
+func main() {
+	DESCRIPTION("circle")
+
+	CIRCLE("bound", "src.poly", "shape", 0.5).IGNORE_MISSING(true)
+
+	Generate()
+}
+-- want.txt --
+---
+description: circle
+processors:
+  - circle:
+      tag: circle_src_poly_into_bound
+      field: src.poly
+      target_field: bound
+      ignore_missing: true
+      shape_type: shape
+      error_distance: 0.5

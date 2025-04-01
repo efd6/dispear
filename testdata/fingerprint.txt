@@ -1,0 +1,28 @@
+cd ${PKG_ROOT}
+go run ${WORK}/main.go
+cd ${WORK}
+cmp stdout want.txt
+
+-- main.go --
+package main
+
+import . "github.com/efd6/dispear"
+
+func main() {
+	DESCRIPTION("fingerprint")
+
+	FINGERPRINT("_id", "src1", "src2").IGNORE_FAILURE(true)
+
+	Generate()
+}
+-- want.txt --
+---
+description: fingerprint
+processors:
+  - fingerprint:
+      tag: fingerprint_into__id
+      fields:
+        - src1
+        - src2
+      target_field: _id
+      ignore_failure: true

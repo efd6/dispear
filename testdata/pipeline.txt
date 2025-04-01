@@ -1,0 +1,25 @@
+cd ${PKG_ROOT}
+go run ${WORK}/main.go
+cd ${WORK}
+cmp stdout want.txt
+
+-- main.go --
+package main
+
+import . "github.com/efd6/dispear"
+
+func main() {
+	DESCRIPTION("pipeline")
+
+	PIPELINE("other-pipeline").IGNORE_MISSING(true)
+
+	Generate()
+}
+-- want.txt --
+---
+description: pipeline
+processors:
+  - pipeline:
+      tag: pipeline_other-pipeline
+      name: '{{ IngestPipeline "other-pipeline" }}'
+      ignore_missing_pipeline: true

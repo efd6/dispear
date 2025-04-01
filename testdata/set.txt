@@ -1,0 +1,38 @@
+cd ${PKG_ROOT}
+go run ${WORK}/main.go
+cd ${WORK}
+cmp stdout want.txt
+
+-- main.go --
+package main
+
+import . "github.com/efd6/dispear"
+
+func main() {
+	DESCRIPTION("set")
+
+	SET("field.to.set").COPY_FROM("src.field").IGNORE_EMPTY(true)
+	SET("field.to.set").VALUE("value").OVERRIDE(false)
+	SET("field.to.set").VALUE("{{{other.field}}}").OVERRIDE(false)
+
+	Generate()
+}
+-- want.txt --
+---
+description: set
+processors:
+  - set:
+      tag: set_field_to_set_1
+      field: field.to.set
+      copy_from: src.field
+      ignore_empty_value: true
+  - set:
+      tag: set_field_to_set_2
+      field: field.to.set
+      value: value
+      override: false
+  - set:
+      tag: set_field_to_set_3
+      field: field.to.set
+      value: '{{{other.field}}}'
+      override: false

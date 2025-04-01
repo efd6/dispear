@@ -1,0 +1,34 @@
+cd ${PKG_ROOT}
+go run ${WORK}/main.go
+cd ${WORK}
+cmp stdout want.txt
+
+-- main.go --
+package main
+
+import . "github.com/efd6/dispear"
+
+func main() {
+	DESCRIPTION("grok")
+
+	GROK("src",
+		"%{ONE}",
+	).PATTERN_DEFINITIONS(
+		map[string]string{
+			"ONE": ".5",
+		},
+	)
+
+	Generate()
+}
+-- want.txt --
+---
+description: grok
+processors:
+  - grok:
+      tag: grok_src
+      field: src
+      patterns:
+        - '%{ONE}'
+      pattern_definitions:
+        ONE: ".5"

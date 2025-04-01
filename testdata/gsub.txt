@@ -1,0 +1,26 @@
+cd ${PKG_ROOT}
+go run ${WORK}/main.go
+cd ${WORK}
+cmp stdout want.txt
+
+-- main.go --
+package main
+
+import . "github.com/efd6/dispear"
+
+func main() {
+	DESCRIPTION("gsub")
+
+	GSUB("", "src", "(..)*", "(..) ").TAG("pairs")
+
+	Generate()
+}
+-- want.txt --
+---
+description: gsub
+processors:
+  - gsub:
+      tag: pairs
+      field: src
+      pattern: (..)*
+      replacement: '(..) '

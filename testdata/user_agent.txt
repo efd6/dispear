@@ -1,0 +1,26 @@
+cd ${PKG_ROOT}
+go run ${WORK}/main.go
+cd ${WORK}
+cmp stdout want.txt
+
+-- main.go --
+package main
+
+import . "github.com/efd6/dispear"
+
+func main() {
+	DESCRIPTION("user_agent")
+
+	USER_AGENT("dst", "src").IGNORE_FAILURE(true)
+
+	Generate()
+}
+-- want.txt --
+---
+description: user_agent
+processors:
+  - user_agent:
+      tag: user_agent_src_into_dst
+      field: src
+      target_field: dst
+      ignore_failure: true

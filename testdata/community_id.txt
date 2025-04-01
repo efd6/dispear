@@ -1,0 +1,24 @@
+cd ${PKG_ROOT}
+go run ${WORK}/main.go
+cd ${WORK}
+cmp stdout want.txt
+
+-- main.go --
+package main
+
+import . "github.com/efd6/dispear"
+
+func main() {
+	DESCRIPTION("community_id")
+
+	COMMUNITY_ID("").SEED(1)
+
+	Generate()
+}
+-- want.txt --
+---
+description: community_id
+processors:
+  - community_id:
+      tag: community_id
+      seed: 1

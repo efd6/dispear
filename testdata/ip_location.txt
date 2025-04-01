@@ -1,0 +1,26 @@
+cd ${PKG_ROOT}
+go run ${WORK}/main.go
+cd ${WORK}
+cmp stdout want.txt
+
+-- main.go --
+package main
+
+import . "github.com/efd6/dispear"
+
+func main() {
+	DESCRIPTION("ip_location")
+
+	IP_LOCATION("geo", "ip").DATABASE_FILE("GeoLite2-Country.mmdb")
+
+	Generate()
+}
+-- want.txt --
+---
+description: ip_location
+processors:
+  - ip_location:
+      tag: ip_location_ip_into_geo
+      field: ip
+      target_field: geo
+      database_file: GeoLite2-Country.mmdb

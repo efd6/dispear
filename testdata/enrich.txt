@@ -1,0 +1,28 @@
+cd ${PKG_ROOT}
+go run ${WORK}/main.go
+cd ${WORK}
+cmp stdout want.txt
+
+-- main.go --
+package main
+
+import . "github.com/efd6/dispear"
+
+func main() {
+	DESCRIPTION("enrich")
+
+	ENRICH("dst", "src").MAX_MATCHES(10).IGNORE_MISSING(true).IGNORE_FAILURE(true)
+
+	Generate()
+}
+-- want.txt --
+---
+description: enrich
+processors:
+  - enrich:
+      tag: enrich_src_into_dst
+      field: src
+      target_field: dst
+      max_matches: 10
+      ignore_missing: true
+      ignore_failure: true

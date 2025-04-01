@@ -1,0 +1,25 @@
+cd ${PKG_ROOT}
+go run ${WORK}/main.go
+cd ${WORK}
+cmp stdout want.txt
+
+-- main.go --
+package main
+
+import . "github.com/efd6/dispear"
+
+func main() {
+	DESCRIPTION("dot_expander")
+
+	DOT_EXPANDER("src").PATH("*")
+
+	Generate()
+}
+-- want.txt --
+---
+description: dot_expander
+processors:
+  - dot_expander:
+      tag: dot_expander_from_src
+      field: src
+      path: '*'

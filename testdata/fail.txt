@@ -1,0 +1,26 @@
+cd ${PKG_ROOT}
+go run ${WORK}/main.go
+cd ${WORK}
+cmp stdout want.txt
+
+-- main.go --
+package main
+
+import . "github.com/efd6/dispear"
+
+func main() {
+	DESCRIPTION("fail")
+
+	FAIL("! did not succeed").IF("ctx.src == null").IGNORE_FAILURE(true)
+
+	Generate()
+}
+-- want.txt --
+---
+description: fail
+processors:
+  - fail:
+      tag: fail
+      if: ctx.src == null
+      message: '! did not succeed'
+      ignore_failure: true

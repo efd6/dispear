@@ -1,0 +1,27 @@
+cd ${PKG_ROOT}
+go run ${WORK}/main.go
+cd ${WORK}
+cmp stdout want.txt
+
+-- main.go --
+package main
+
+import . "github.com/efd6/dispear"
+
+func main() {
+	DESCRIPTION("dissect")
+
+	DISSECT("src", "%{ONE THING}").IGNORE_MISSING(true).APPEND_SEPARATOR("-")
+
+	Generate()
+}
+-- want.txt --
+---
+description: dissect
+processors:
+  - dissect:
+      tag: dissect_src
+      field: src
+      pattern: '%{ONE THING}'
+      append_separator: '-'
+      ignore_missing: true

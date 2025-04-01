@@ -1,0 +1,27 @@
+cd ${PKG_ROOT}
+go run ${WORK}/main.go
+cd ${WORK}
+cmp stdout want.txt
+
+-- main.go --
+package main
+
+import . "github.com/efd6/dispear"
+
+func main() {
+	DESCRIPTION("set_security_user")
+
+	SET_SECURITY_USER("user.field").PROPERTIES("one", "two")
+
+	Generate()
+}
+-- want.txt --
+---
+description: set_security_user
+processors:
+  - set_security_user:
+      tag: set_security_user_to_user_field
+      field: user.field
+      properties:
+        - one
+        - two

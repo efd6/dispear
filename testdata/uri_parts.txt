@@ -1,0 +1,25 @@
+cd ${PKG_ROOT}
+go run ${WORK}/main.go
+cd ${WORK}
+cmp stdout want.txt
+
+-- main.go --
+package main
+
+import . "github.com/efd6/dispear"
+
+func main() {
+	DESCRIPTION("uri_parts")
+
+	URI_PARTS("url", "src")
+
+	Generate()
+}
+-- want.txt --
+---
+description: uri_parts
+processors:
+  - uri_parts:
+      tag: uri_parts_src_into_url
+      field: src
+      target_field: url

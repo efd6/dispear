@@ -1,0 +1,25 @@
+cd ${PKG_ROOT}
+go run ${WORK}/main.go
+cd ${WORK}
+cmp stdout want.txt
+
+-- main.go --
+package main
+
+import . "github.com/efd6/dispear"
+
+func main() {
+	DESCRIPTION("uppercase")
+
+	UPPERCASE("dst", "src")
+
+	Generate()
+}
+-- want.txt --
+---
+description: uppercase
+processors:
+  - uppercase:
+      tag: uppercase_src_into_dst
+      field: src
+      target_field: dst

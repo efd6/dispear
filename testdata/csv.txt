@@ -1,0 +1,27 @@
+cd ${PKG_ROOT}
+go run ${WORK}/main.go
+cd ${WORK}
+cmp stdout want.txt
+
+-- main.go --
+package main
+
+import . "github.com/efd6/dispear"
+
+func main() {
+	DESCRIPTION("csv")
+
+	CSV("dst", "src.field").QUOTE(`"`).EMPTY_VALUE("-").TRIM(true)
+
+	Generate()
+}
+-- want.txt --
+---
+description: csv
+processors:
+  - csv:
+      tag: csv_src_field_into_dst
+      field: src.field
+      target_field: dst
+      quote: '"'
+      trim: true

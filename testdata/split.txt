@@ -1,0 +1,42 @@
+cd ${PKG_ROOT}
+go run ${WORK}/main.go
+cd ${WORK}
+cmp stdout want.txt
+
+-- main.go --
+package main
+
+import . "github.com/efd6/dispear"
+
+func main() {
+	DESCRIPTION("split")
+
+	SPLIT("", "src", "/")
+	SPLIT("dst", "src", "/")
+	SPLIT("", "src", ":")
+	SPLIT("dst", "src", ":")
+
+	Generate()
+}
+-- want.txt --
+---
+description: split
+processors:
+  - split:
+      tag: split_src_1
+      field: src
+      separator: /
+  - split:
+      tag: split_src_into_dst_1
+      field: src
+      separator: /
+      target_field: dst
+  - split:
+      tag: split_src_2
+      field: src
+      separator: ':'
+  - split:
+      tag: split_src_into_dst_2
+      field: src
+      separator: ':'
+      target_field: dst

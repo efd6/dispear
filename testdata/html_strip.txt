@@ -1,0 +1,24 @@
+cd ${PKG_ROOT}
+go run ${WORK}/main.go
+cd ${WORK}
+cmp stdout want.txt
+
+-- main.go --
+package main
+
+import . "github.com/efd6/dispear"
+
+func main() {
+	DESCRIPTION("html_strip")
+
+	HTML_STRIP("", "src")
+
+	Generate()
+}
+-- want.txt --
+---
+description: html_strip
+processors:
+  - html_strip:
+      tag: html_strip_src
+      field: src

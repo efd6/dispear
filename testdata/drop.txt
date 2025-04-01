@@ -1,0 +1,24 @@
+cd ${PKG_ROOT}
+go run ${WORK}/main.go
+cd ${WORK}
+cmp stdout want.txt
+
+-- main.go --
+package main
+
+import . "github.com/efd6/dispear"
+
+func main() {
+	DESCRIPTION("drop")
+
+	DROP("invalid document").IF("ctx.src == null")
+
+	Generate()
+}
+-- want.txt --
+---
+description: drop
+processors:
+  - drop:
+      tag: drop_invalid_document
+      if: ctx.src == null

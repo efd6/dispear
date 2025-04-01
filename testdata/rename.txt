@@ -1,0 +1,25 @@
+cd ${PKG_ROOT}
+go run ${WORK}/main.go
+cd ${WORK}
+cmp stdout want.txt
+
+-- main.go --
+package main
+
+import . "github.com/efd6/dispear"
+
+func main() {
+	DESCRIPTION("rename")
+
+	RENAME("old", "new")
+
+	Generate()
+}
+-- want.txt --
+---
+description: rename
+processors:
+  - rename:
+      tag: rename_old_to_new
+      field: old
+      target_field: new

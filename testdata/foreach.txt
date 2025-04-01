@@ -1,0 +1,31 @@
+cd ${PKG_ROOT}
+go run ${WORK}/main.go
+cd ${WORK}
+cmp stdout want.txt
+
+-- main.go --
+package main
+
+import . "github.com/efd6/dispear"
+
+func main() {
+	DESCRIPTION("foreach")
+
+	FOREACH("src",
+		APPEND("dst", "{{{_ingest._value}}}"),
+	)
+
+	Generate()
+}
+-- want.txt --
+---
+description: foreach
+processors:
+  - foreach:
+      tag: foreach_of_src
+      field: src
+      processor:
+        append:
+          tag: append_dst
+          field: dst
+          value: '{{{_ingest._value}}}'

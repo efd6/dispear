@@ -1,0 +1,69 @@
+cd ${PKG_ROOT}
+go run ${WORK}/main.go
+cd ${WORK}
+cmp stdout want.txt
+
+-- main.go --
+package main
+
+import . "github.com/efd6/dispear"
+
+func main() {
+	DESCRIPTION("inference")
+
+	INFERENCE("", "id").INPUT_OUTPUT(map[string]string{
+		"in1": "out1",
+		"in2": "out2",
+	}).INFERENCE_CONFIG(map[string]any{
+		"classification": map[string]any{
+			"num_top_classes":           2,
+			"results_field":             "prediction",
+			"top_classes_results_field": "probabilities",
+		},
+	})
+	INFERENCE("dst", "id").FIELD_MAP(map[string]string{
+		"in1": "out1",
+		"in2": "out2",
+	}).INFERENCE_CONFIG(map[string]any{
+		"classification": map[string]any{
+			"num_top_classes":           2,
+			"results_field":             "prediction",
+			"top_classes_results_field": "probabilities",
+		},
+	})
+
+	Generate()
+}
+-- want.txt --
+---
+description: inference
+processors:
+  - inference:
+      tag: inference_id
+      model_id: id
+      input_output:
+        - input_field: in1
+          output_field: out1
+        - input_field: in2
+          output_field: out2
+      inference_config: {
+          "classification": {
+            "num_top_classes": 2,
+            "results_field": "prediction",
+            "top_classes_results_field": "probabilities"
+          }
+        }
+  - inference:
+      tag: inference_id_into_dst
+      model_id: id
+      target_field: dst
+      field_map:
+        in1: out1
+        in2: out2
+      inference_config: {
+          "classification": {
+            "num_top_classes": 2,
+            "results_field": "prediction",
+            "top_classes_results_field": "probabilities"
+          }
+        }
