@@ -24,6 +24,7 @@ func yamlString(s string) (string, error) {
 //
 // ¯\_(ツ)_/¯
 func yamlValue(v any) (string, error) {
+	v = map[string]any{"value": v}
 	var buf bytes.Buffer
 	enc := yaml.NewEncoder(&buf)
 	err := enc.Encode(v)
@@ -38,6 +39,7 @@ func yamlValue(v any) (string, error) {
 	}
 	buf.Reset()
 	enc = yaml.NewEncoder(&buf)
+	enc.SetIndent(6)
 	err = enc.Encode(n.Content[0])
 	if err != nil {
 		return "", err

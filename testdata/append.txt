@@ -16,6 +16,9 @@ func main() {
 	APPEND("dst", 1.5)
 	APPEND("dst", true)
 	APPEND("dst", false)
+	APPEND("dst", []int{
+		1, 2, 3, 4,
+	}).ALLOW_DUPLICATES(false)
 
 	Generate()
 }
@@ -43,3 +46,12 @@ processors:
       tag: append_dst_5
       field: dst
       value: false
+  - append:
+      tag: append_dst_6
+      field: dst
+      value:
+        - 1
+        - 2
+        - 3
+        - 4
+      allow_duplicates: false

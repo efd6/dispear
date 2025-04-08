@@ -18,6 +18,9 @@ func main() {
 	SET("field.to.set").VALUE(1.5).OVERRIDE(false)
 	SET("field.to.set").VALUE(true).OVERRIDE(false)
 	SET("field.to.set").VALUE(false).OVERRIDE(false)
+	SET("field.to.set").VALUE([]int{
+		1, 2, 3, 4,
+	}).OVERRIDE(true)
 
 	Generate()
 }
@@ -60,3 +63,12 @@ processors:
       field: field.to.set
       value: false
       override: false
+  - set:
+      tag: set_field_to_set_8
+      field: field.to.set
+      value:
+        - 1
+        - 2
+        - 3
+        - 4
+      override: true
