@@ -19,10 +19,6 @@ const (
 	PkgRoot    = "ocsf"
 )
 
-func pkgPath(s ...string) string {
-	return PkgRoot + "." + strings.Join(s, ".")
-}
-
 func main() {
 	DESCRIPTION("Pipeline for processing Amazon Security Lake Events.")
 	ON_FAILURE(
