@@ -17,8 +17,8 @@ func main() {
 		SET("event.kind").VALUE("error"),
 		APPEND("error.message", "oops"),
 	)
-	BLANK()
 	BLANK().COMMENT("Global level comment.")
+
 	BLANK()
 
 	Generate()
@@ -33,7 +33,6 @@ _meta: {
 deprecated: false
 processors:
   # Global level comment.
-
 
 on_failure:
   - set:

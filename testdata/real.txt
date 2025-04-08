@@ -27,8 +27,8 @@ func main() {
 		APPEND("tags", "preserve_original_event").
 			ALLOW_DUPLICATES(false),
 	)
-	BLANK()
 	BLANK().COMMENT("Base Event docs: https://schema.ocsf.io/1.1.0/base_event?extensions=")
+	BLANK()
 
 	SET("ecs.version").VALUE(ECSVersion)
 	RENAME("message", "event.original").
@@ -89,7 +89,7 @@ func main() {
 		IGNORE_MISSING(true)
 
 	BLANK()
-	BLANK()
+
 	BLANK().COMMENT("Set event.kind based on ocsf.class_uid.")
 	for _, s := range []struct{ uids, val string }{
 		{
@@ -110,7 +110,7 @@ func main() {
 	}
 
 	BLANK()
-	BLANK()
+
 	BLANK().COMMENT("Set event.category based on ocsf.class_uid.")
 	for _, a := range []struct{ uids, cond, val string }{
 		{
@@ -252,7 +252,7 @@ func main() {
 	}
 
 	BLANK()
-	BLANK()
+
 	BLANK().COMMENT("Set cloud details.")
 	for _, s := range []struct{ dst, src string }{
 		{dst: "cloud.account.id", src: "ocsf.cloud.account.uid"},
@@ -645,6 +645,7 @@ func main() {
 	}
 
 	BLANK()
+
 	SET("event.pipeline").COMMENT("Error handling.").
 		IF("ctx.error?.message != null").
 		VALUE("pipeline_error")
@@ -1097,7 +1098,6 @@ processors:
       ignore_missing: true
 
   # Set event.kind based on ocsf.class_uid.
-
   - set:
       tag: set_event_kind_1
       if: ctx.ocsf?.class_uid != null && ['1001','1002','1003','1004','1005','1006','1007','3001','3002','3003','3005','3006','4001','4002','4003','4004','4005','4006','4007','4008','4009','4010','4011','4012','4013','5001','5002','5003','5004','5019','6001','6002','6003','6004','6005','6006','6007'].contains(ctx.ocsf.class_uid)
@@ -1110,7 +1110,6 @@ processors:
       value: alert
 
   # Set event.category based on ocsf.class_uid.
-
   - append:
       tag: append_malware_into_event_category
       if: ctx.ocsf?.class_uid != null && ['2001'].contains(ctx.ocsf.class_uid)malware%!(EXTRA string= && ctx.ocsf.malware != null)
@@ -1287,7 +1286,6 @@ processors:
       allow_duplicates: false
 
   # Set cloud details.
-
   - set:
       tag: set_cloud_account_id_1
       field: cloud.account.id

@@ -198,14 +198,16 @@ func (b *Blank) COMMENT(s string) *Blank {
 }
 
 func (p *Blank) Render(dst io.Writer) error {
+	var err error
 	if p.Comment != nil {
-		text := "# " + strings.Join(strings.Split(*p.Comment, "\n"), "\n# ")
-		_, err := dst.Write([]byte(text))
+		text := "\n# " + strings.Join(strings.Split(*p.Comment, "\n"), "\n# ")
+		_, err = dst.Write([]byte(text))
 		if err != nil {
 			return err
 		}
+	} else {
+		_, err = dst.Write([]byte{'\n'})
 	}
-	_, err := dst.Write([]byte{'\n'})
 	return err
 }
 
