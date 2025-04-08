@@ -21,7 +21,7 @@ type SetProc struct {
 	shared[*SetProc]
 
 	Field       string
-	Value       *string
+	Value       any
 	CopyFrom    *string
 	Override    *bool
 	MediaType   *string
@@ -36,11 +36,11 @@ func (p *SetProc) IGNORE_EMPTY(t bool) *SetProc {
 	return p
 }
 
-func (p *SetProc) VALUE(s string) *SetProc {
+func (p *SetProc) VALUE(v any) *SetProc {
 	if p.Value != nil {
 		panic("multiple VALUE calls")
 	}
-	p.Value = &s
+	p.Value = &v
 	return p
 }
 
@@ -81,7 +81,7 @@ func (p *SetProc) Render(dst io.Writer) error {
 		preamble + `
     field: {{yaml_string .Field}}
 {{- with .Value}}
-    value: {{yaml_string .}}
+    value: {{yaml_value .}}
 {{- end -}}
 {{- with .CopyFrom}}
     copy_from: {{yaml_string .}}

@@ -7,8 +7,8 @@ import (
 )
 
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/append-processor.html.
-func APPEND(dst, val string) *AppendProc {
-	p := &AppendProc{Field: dst, Value: val}
+func APPEND(dst string, val any) *AppendProc {
+	p := &AppendProc{Field: dst, Value: &val}
 	p.recDecl()
 	p.Tag = "append_" + PathCleaner.Replace(dst)
 	p.parent = p
@@ -21,7 +21,7 @@ type AppendProc struct {
 	shared[*AppendProc]
 
 	Field           string
-	Value           string
+	Value           any
 	AllowDuplicates *bool
 	MediaType       *string
 }
@@ -51,7 +51,7 @@ func (p *AppendProc) Render(dst io.Writer) error {
 {{end}}- append:` +
 		preamble + `
     field: {{yaml_string .Field}}
-    value: {{yaml_string .Value}}
+    value: {{yaml_value .Value}}
 {{- with .MediaType}}
     media_type: {{yaml_string .}}
 {{- end -}}

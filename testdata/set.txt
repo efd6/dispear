@@ -14,6 +14,10 @@ func main() {
 	SET("field.to.set").COPY_FROM("src.field").IGNORE_EMPTY(true)
 	SET("field.to.set").VALUE("value").OVERRIDE(false)
 	SET("field.to.set").VALUE("{{{other.field}}}").OVERRIDE(false)
+	SET("field.to.set").VALUE(1).OVERRIDE(false)
+	SET("field.to.set").VALUE(1.5).OVERRIDE(false)
+	SET("field.to.set").VALUE(true).OVERRIDE(false)
+	SET("field.to.set").VALUE(false).OVERRIDE(false)
 
 	Generate()
 }
@@ -35,4 +39,24 @@ processors:
       tag: set_field_to_set_3
       field: field.to.set
       value: '{{{other.field}}}'
+      override: false
+  - set:
+      tag: set_field_to_set_4
+      field: field.to.set
+      value: 1
+      override: false
+  - set:
+      tag: set_field_to_set_5
+      field: field.to.set
+      value: 1.5
+      override: false
+  - set:
+      tag: set_field_to_set_6
+      field: field.to.set
+      value: true
+      override: false
+  - set:
+      tag: set_field_to_set_7
+      field: field.to.set
+      value: false
       override: false

@@ -18,3 +18,29 @@ func yamlString(s string) (string, error) {
 	}
 	return strings.TrimRight(buf.String(), "\n"), nil
 }
+
+// There must be a better way to do this, but given that this is YAML,
+// probably not.
+//
+// ¯\_(ツ)_/¯
+func yamlValue(v any) (string, error) {
+	var buf bytes.Buffer
+	enc := yaml.NewEncoder(&buf)
+	err := enc.Encode(v)
+	if err != nil {
+		return "", err
+	}
+	dec := yaml.NewDecoder(&buf)
+	var n yaml.Node
+	err = dec.Decode(&n)
+	if err != nil {
+		return "", err
+	}
+	buf.Reset()
+	enc = yaml.NewEncoder(&buf)
+	err = enc.Encode(n.Content[0])
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimRight(buf.String(), "\n"), nil
+}

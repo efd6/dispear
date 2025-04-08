@@ -11,7 +11,11 @@ import . "github.com/efd6/dispear"
 func main() {
 	DESCRIPTION("append")
 
-	ATTACHMENT("", "src").PROPERTIES("content", "title")
+	APPEND("dst", "val")
+	APPEND("dst", 1)
+	APPEND("dst", 1.5)
+	APPEND("dst", true)
+	APPEND("dst", false)
 
 	Generate()
 }
@@ -19,9 +23,23 @@ func main() {
 ---
 description: append
 processors:
-  - attachment:
-      tag: attachment_src
-      field: src
-      properties:
-        - content
-        - title
+  - append:
+      tag: append_dst_1
+      field: dst
+      value: val
+  - append:
+      tag: append_dst_2
+      field: dst
+      value: 1
+  - append:
+      tag: append_dst_3
+      field: dst
+      value: 1.5
+  - append:
+      tag: append_dst_4
+      field: dst
+      value: true
+  - append:
+      tag: append_dst_5
+      field: dst
+      value: false

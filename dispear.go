@@ -120,6 +120,7 @@ var templateHelpers = template.FuncMap{
 		return string(b), nil
 	},
 	"yaml_string": yamlString,
+	"yaml_value":  yamlValue,
 	"render": func(r Renderer) (string, error) {
 		var buf bytes.Buffer
 		err := r.Render(&buf)
