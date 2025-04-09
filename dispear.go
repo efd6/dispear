@@ -2,7 +2,6 @@ package dispear
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -67,13 +66,6 @@ func (c *Context) Generate() error {
 		}
 	}
 	pipelineTemplate := template.Must(template.New("pipeline").Funcs(template.FuncMap{
-		"json": func(m map[string]any) (string, error) {
-			b, err := json.MarshalIndent(m, "  ", "  ")
-			if err != nil {
-				return "", err
-			}
-			return string(b), nil
-		},
 		"yaml":        yamlValue,
 		"yaml_string": yamlString,
 		"render": func(r Renderer) (string, error) {
