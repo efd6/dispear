@@ -105,7 +105,7 @@ func (p *InferenceProc) Render(dst io.Writer) error {
       {{yaml_string .Document}}: {{yaml_string .Model}}{{end}}
 {{- end -}}
 {{- with .Config}}
-    inference_config: {{json .}}
+{{yaml 4 2 "inference_config" .}}
 {{- end -}}
 {{- with .IgnoreMissing}}
     ignore_missing: {{.}}

@@ -72,7 +72,7 @@ func (p *ScriptProc) Render(dst io.Writer) error {
     lang: {{yaml_string .}}
 {{- end -}}
 {{- with .Params}}
-    params: {{json .}}
+{{yaml 4 2 "params" .}}
 {{- end -}}
 {{- with .ScriptID}}
     id: {{yaml_string .}}

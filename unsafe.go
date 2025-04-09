@@ -23,8 +23,8 @@ func yamlString(s string) (string, error) {
 // probably not.
 //
 // ¯\_(ツ)_/¯
-func yamlValue(v any) (string, error) {
-	v = map[string]any{"value": v}
+func yamlValue(pre, in int, k string, v any) (string, error) {
+	v = map[string]any{k: v}
 	var buf bytes.Buffer
 	enc := yaml.NewEncoder(&buf)
 	err := enc.Encode(v)
@@ -39,10 +39,10 @@ func yamlValue(v any) (string, error) {
 	}
 	buf.Reset()
 	enc = yaml.NewEncoder(&buf)
-	enc.SetIndent(6)
+	enc.SetIndent(in)
 	err = enc.Encode(n.Content[0])
 	if err != nil {
 		return "", err
 	}
-	return strings.TrimRight(buf.String(), "\n"), nil
+	return indent(strings.TrimRight(buf.String(), "\n"), pre), nil
 }

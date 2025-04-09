@@ -81,7 +81,7 @@ func (p *SetProc) Render(dst io.Writer) error {
 		preamble + `
     field: {{yaml_string .Field}}
 {{- with .Value}}
-    {{yaml_value .}}
+{{yaml 4 2 "value" .}}
 {{- end -}}
 {{- with .CopyFrom}}
     copy_from: {{yaml_string .}}

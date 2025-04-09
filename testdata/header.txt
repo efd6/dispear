@@ -11,7 +11,12 @@ import . "github.com/efd6/dispear"
 func main() {
 	DESCRIPTION("!! test pipeline !!")
 	VERSION(1)
-	METADATA(map[string]any{"important thing": "value"})
+	METADATA(map[string]any{
+		"important thing": "value",
+		"important_object": map[string]any{
+			"one": 1,
+		},
+	})
 	DEPRECATED(false)
 	ON_FAILURE(
 		SET("event.kind").VALUE("error"),
@@ -27,9 +32,10 @@ func main() {
 ---
 description: '!! test pipeline !!'
 version: 1
-_meta: {
-    "important thing": "value"
-  }
+_meta:
+  important thing: value
+  important_object:
+    one: 1
 deprecated: false
 processors:
   # Global level comment.

@@ -74,6 +74,7 @@ func (c *Context) Generate() error {
 			}
 			return string(b), nil
 		},
+		"yaml":        yamlValue,
 		"yaml_string": yamlString,
 		"render": func(r Renderer) (string, error) {
 			var buf bytes.Buffer
@@ -89,7 +90,7 @@ func (c *Context) Generate() error {
 {{end -}}
 {{with .Version}}version: {{.}}
 {{end -}}
-{{with .Metadata}}_meta: {{json .}}
+{{with .Metadata}}{{yaml 0 2 "_meta" .}}
 {{end -}}
 {{with .Deprecated}}deprecated: {{.}}
 {{end -}}
@@ -112,15 +113,8 @@ var templateHelpers = template.FuncMap{
 	"comment": func(s string) string {
 		return "# " + strings.Join(strings.Split(s, "\n"), "\n# ")
 	},
-	"json": func(m map[string]any) (string, error) {
-		b, err := json.MarshalIndent(m, "      ", "  ")
-		if err != nil {
-			return "", err
-		}
-		return string(b), nil
-	},
+	"yaml":        yamlValue,
 	"yaml_string": yamlString,
-	"yaml_value":  yamlValue,
 	"render": func(r Renderer) (string, error) {
 		var buf bytes.Buffer
 		err := r.Render(&buf)

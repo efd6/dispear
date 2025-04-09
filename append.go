@@ -51,7 +51,7 @@ func (p *AppendProc) Render(dst io.Writer) error {
 {{end}}- append:` +
 		preamble + `
     field: {{yaml_string .Field}}
-    {{yaml_value .Value}}
+{{yaml 4 2 "value" .Value}}
 {{- with .MediaType}}
     media_type: {{yaml_string .}}
 {{- end -}}

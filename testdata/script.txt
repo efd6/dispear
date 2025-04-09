@@ -25,7 +25,12 @@ func main() {
           return false;
         }
         drop(ctx);
-    `)
+    `).PARAMS(map[string]any{
+		"values": map[string]any{
+			"one": 1,
+			"two": 2,
+		},
+	})
 
 	Generate()
 }
@@ -35,6 +40,10 @@ description: script
 processors:
   - script:
       tag: script
+      params:
+        values:
+          one: 1
+          two: 2
       source: |-
         boolean drop(Object object) {
           if (object == null || object == '' || object == 'null') {
