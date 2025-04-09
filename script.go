@@ -62,7 +62,7 @@ func (p *ScriptProc) Render(dst io.Writer) error {
 	if (p.ScriptID == nil) == (p.Source == nil) {
 		return fmt.Errorf("must have one of id or source for SCRIPT %s:%d: %s", p.file, p.line, p.Tag)
 	}
-	scriptTemplate := template.Must(template.New("lowercase").Funcs(templateHelpers).Funcs(template.FuncMap{
+	scriptTemplate := template.Must(template.New("script").Funcs(templateHelpers).Funcs(template.FuncMap{
 		"indent": indentScript,
 	}).Parse(`
 {{with .Comment}}{{comment .}}

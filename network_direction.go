@@ -65,7 +65,7 @@ func (p *NetworkDirectionProc) IGNORE_MISSING(t bool) *NetworkDirectionProc {
 }
 
 func (p *NetworkDirectionProc) Render(dst io.Writer) error {
-	networkDirectionTemplate := template.Must(template.New("lowercase").Funcs(templateHelpers).Parse(`
+	networkDirectionTemplate := template.Must(template.New("network_direction").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
 {{end}}- network_direction:` +
 		preamble + `

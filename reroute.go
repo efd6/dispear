@@ -58,7 +58,7 @@ func (p *RerouteProc) Render(dst io.Writer) error {
 	if !isValidRerouteName(p.Dataset) {
 		return fmt.Errorf("invalid dataset name for REROUTE %s:%d: %s", p.file, p.line, p.Tag)
 	}
-	networkDirectionTemplate := template.Must(template.New("lowercase").Funcs(templateHelpers).Parse(`
+	rerouteTemplate := template.Must(template.New("reroute").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
 {{end}}- reroute:` +
 		preamble + `
@@ -73,7 +73,7 @@ func (p *RerouteProc) Render(dst io.Writer) error {
 {{- end -}}` +
 		postamble,
 	))
-	return networkDirectionTemplate.Execute(dst, p)
+	return rerouteTemplate.Execute(dst, p)
 }
 
 func isValidRerouteName(p *string) bool {
