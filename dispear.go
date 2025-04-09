@@ -113,6 +113,7 @@ var templateHelpers = template.FuncMap{
 	"comment": func(s string) string {
 		return "# " + strings.Join(strings.Split(s, "\n"), "\n# ")
 	},
+	"gutter":      gutter,
 	"yaml":        yamlValue,
 	"yaml_string": yamlString,
 	"render": func(r Renderer) (string, error) {
@@ -230,7 +231,7 @@ const (
     tag: {{.}}
 {{- end -}}
 {{- with .Condition}}
-{{yaml 4 2 "if" .}}
+{{gutter . | yaml 4 2 "if"}}
 {{- end}}`
 
 	postamble = `
@@ -294,9 +295,7 @@ func (p *shared[P]) IF(s string) P {
 	if p.Condition != nil {
 		panic("multiple IF calls")
 	}
-	if strings.ContainsRune(s, '\n') {
-		s, _ = indentScript(0, s)
-	} else {
+	if !strings.ContainsRune(s, '\n') {
 		s = strings.TrimSpace(s)
 	}
 	p.Condition = &s
@@ -349,14 +348,13 @@ func dedent(s string, n int) string {
 	return strings.Join(lines, "\n")
 }
 
-func indentScript(n int, s string) (string, error) {
+func gutter(s string) (string, error) {
 	if strings.TrimSpace(s) == "" {
 		return "", errors.New("no source text")
 	}
 	lines := strings.Split(s, "\n")
 	indented := -1
 	var blanks int
-	prefix := strings.Repeat(" ", n)
 	for i, l := range lines {
 		if strings.TrimSpace(l) == "" {
 			if indented < 0 {
@@ -368,11 +366,7 @@ func indentScript(n int, s string) (string, error) {
 			blanks = i
 			indented = strings.IndexFunc(l, func(r rune) bool { return !unicode.IsSpace(r) })
 		}
-		l = l[min(indented, len(l)):]
-		if l != "" {
-			l = prefix + l
-		}
-		lines[i] = l
+		lines[i] = l[min(indented, len(l)):]
 	}
 	return strings.TrimRightFunc(strings.Join(lines[blanks:], "\n"), unicode.IsSpace), nil
 }

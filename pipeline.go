@@ -42,6 +42,7 @@ func (p *PipelineProc) Render(dst io.Writer) error {
 		"comment": func(s string) string {
 			return "# " + strings.Join(strings.Split(s, "\n"), "\n# ")
 		},
+		"gutter":      gutter,
 		"yaml":        yamlValue,
 		"yaml_string": yamlString,
 		"render": func(r Renderer) (string, error) {

@@ -1376,8 +1376,7 @@ processors:
       description: Convert duration from milliseconds to nanoseconds.
       tag: script_duration_ms_to_ns
       if: ctx.ocsf?.duration != null
-      source: |-
-        ctx.event.duration = ctx.ocsf.duration * 1000000;
+      source: ctx.event.duration = ctx.ocsf.duration * 1000000;
   - set:
       tag: set_event_id
       field: event.id

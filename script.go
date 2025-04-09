@@ -63,7 +63,7 @@ func (p *ScriptProc) Render(dst io.Writer) error {
 		return fmt.Errorf("must have one of id or source for SCRIPT %s:%d: %s", p.file, p.line, p.Tag)
 	}
 	scriptTemplate := template.Must(template.New("script").Funcs(templateHelpers).Funcs(template.FuncMap{
-		"indent": indentScript,
+		"gutter": gutter,
 	}).Parse(`
 {{with .Comment}}{{comment .}}
 {{end}}- script:` +
@@ -78,8 +78,7 @@ func (p *ScriptProc) Render(dst io.Writer) error {
     id: {{yaml_string .}}
 {{- end -}}
 {{- with .Source}}
-    source: |-
-{{indent 6 .}}
+{{gutter . | yaml 4 2 "source"}}
 {{- end -}}` +
 		postamble,
 	))
