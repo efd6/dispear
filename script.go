@@ -79,7 +79,7 @@ func (p *ScriptProc) Render(dst io.Writer) error {
 {{- end -}}
 {{- with .Source}}
     source: |-
-{{indent .}}
+{{indent 6 .}}
 {{- end -}}` +
 		postamble,
 	))

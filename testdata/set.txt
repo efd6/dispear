@@ -21,6 +21,18 @@ func main() {
 	SET("field.to.set").VALUE([]int{
 		1, 2, 3, 4,
 	}).OVERRIDE(true)
+	SET("field.to.set").VALUE(false).IF(`ctx.field != null && (ctx.field != 0 || ctx.field != '')`)
+	SET("field.to.set").VALUE(false).IF(` ctx.field != null && (ctx.field != 0 || ctx.field != '') `)
+	SET("field.to.set").VALUE(false).IF(`ctx.field != null && (
+  ctx.field != 0 ||
+  ctx.field != ''
+)`)
+	SET("field.to.set").VALUE(false).IF(`
+        ctx.field != null && (
+          ctx.field != 0 ||
+          ctx.field != ''
+        )
+    `)
 
 	Generate()
 }
@@ -29,42 +41,42 @@ func main() {
 description: set
 processors:
   - set:
-      tag: set_field_to_set_1
+      tag: set_field_to_set_01
       field: field.to.set
       copy_from: src.field
       ignore_empty_value: true
   - set:
-      tag: set_field_to_set_2
+      tag: set_field_to_set_02
       field: field.to.set
       value: value
       override: false
   - set:
-      tag: set_field_to_set_3
+      tag: set_field_to_set_03
       field: field.to.set
       value: '{{{other.field}}}'
       override: false
   - set:
-      tag: set_field_to_set_4
+      tag: set_field_to_set_04
       field: field.to.set
       value: 1
       override: false
   - set:
-      tag: set_field_to_set_5
+      tag: set_field_to_set_05
       field: field.to.set
       value: 1.5
       override: false
   - set:
-      tag: set_field_to_set_6
+      tag: set_field_to_set_06
       field: field.to.set
       value: true
       override: false
   - set:
-      tag: set_field_to_set_7
+      tag: set_field_to_set_07
       field: field.to.set
       value: false
       override: false
   - set:
-      tag: set_field_to_set_8
+      tag: set_field_to_set_08
       field: field.to.set
       value:
         - 1
@@ -72,3 +84,31 @@ processors:
         - 3
         - 4
       override: true
+  - set:
+      tag: set_field_to_set_09
+      if: ctx.field != null && (ctx.field != 0 || ctx.field != '')
+      field: field.to.set
+      value: false
+  - set:
+      tag: set_field_to_set_10
+      if: ctx.field != null && (ctx.field != 0 || ctx.field != '')
+      field: field.to.set
+      value: false
+  - set:
+      tag: set_field_to_set_11
+      if: |-
+        ctx.field != null && (
+          ctx.field != 0 ||
+          ctx.field != ''
+        )
+      field: field.to.set
+      value: false
+  - set:
+      tag: set_field_to_set_12
+      if: |-
+        ctx.field != null && (
+          ctx.field != 0 ||
+          ctx.field != ''
+        )
+      field: field.to.set
+      value: false
