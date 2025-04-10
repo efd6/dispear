@@ -6,6 +6,8 @@ import (
 	"text/template"
 )
 
+// HTML_STRIP adds an html_strip processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/htmlstrip-processor.html.
 func HTML_STRIP(dst, src string) *HTMLStripProc {
 	var pDst *string

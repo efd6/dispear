@@ -6,6 +6,8 @@ import (
 	"text/template"
 )
 
+// DATE adds a date processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/date-processor.html.
 func DATE(dst, src string, formats ...string) *DateProc {
 	var pDst *string

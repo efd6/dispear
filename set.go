@@ -6,6 +6,8 @@ import (
 	"text/template"
 )
 
+// SET adds a set processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/set-processor.html.
 func SET(dst string) *SetProc {
 	p := &SetProc{Field: dst}

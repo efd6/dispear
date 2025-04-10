@@ -6,6 +6,8 @@ import (
 	"text/template"
 )
 
+// ENRICH adds an enrich processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/enrich-processor.html.
 func ENRICH(dst, src string) *EnrichProc {
 	p := &EnrichProc{Field: src, TargetField: dst}

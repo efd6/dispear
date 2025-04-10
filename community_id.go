@@ -5,6 +5,8 @@ import (
 	"text/template"
 )
 
+// COMMUNITY_ID adds a community_id processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/community-id-processor.html.
 func COMMUNITY_ID(dst string) *CommunityIDProc {
 	var pDst *string

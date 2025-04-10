@@ -14,12 +14,26 @@ import (
 	"unicode"
 )
 
-func DESCRIPTION(s string)      { ctx.pipeline.DESCRIPTION(s) }
-func VERSION(v int)             { ctx.pipeline.VERSION(v) }
-func METADATA(m map[string]any) { ctx.pipeline.METADATA(m) }
-func DEPRECATED(t bool)         { ctx.pipeline.DEPRECATED(t) }
-func ON_FAILURE(h ...Renderer)  { ctx.pipeline.ON_FAILURE(h...) }
+// DESCRIPTION sets the pipeline description field in the global context.
+func DESCRIPTION(s string) { ctx.pipeline.DESCRIPTION(s) }
 
+// VERSION sets the pipeline version field in the global context.
+func VERSION(v int) { ctx.pipeline.VERSION(v) }
+
+// METADATA sets the pipeline _meta field in the global context.
+func METADATA(m map[string]any) { ctx.pipeline.METADATA(m) }
+
+// DEPRECATED sets the pipeline deprecated status field in the global context.
+func DEPRECATED(t bool) { ctx.pipeline.DEPRECATED(t) }
+
+// ON_FAILURE sets the pipeline's global error handlers in the global context.
+// Processors that are added to a pipeline's on_failure field are removed from
+// the global context as independent processors.
+func ON_FAILURE(h ...Renderer) { ctx.pipeline.ON_FAILURE(h...) }
+
+// Generate emits the constructed pipeline in the global context. It should be
+// called in the final line of the program. Currently the rendered pipeline is
+// printed to standard output.
 func Generate() error {
 	err := ctx.Generate()
 	if err != nil {
@@ -30,12 +44,14 @@ func Generate() error {
 
 var ctx = Context{tags: make(map[string][]retagger)}
 
+// Context holds the state necessary for constructing the pipeline.
 type Context struct {
 	pipeline   pipeline
 	processors []Renderer
 	tags       map[string][]retagger
 }
 
+// Renderer is the interface required for processor rendering.
 type Renderer interface {
 	Render(dst io.Writer) error
 }
@@ -44,6 +60,7 @@ type retagger interface {
 	retag(string)
 }
 
+// Add adds a processor to the context.
 func (c *Context) Add(p Renderer) {
 	c.processors = append(c.processors, p)
 }
@@ -166,6 +183,7 @@ func (pipe *pipeline) ON_FAILURE(h ...Renderer) {
 	}
 }
 
+// BLANK is a no-op processor that adds a blank line to the pipeline syntax.
 func BLANK() *Blank {
 	b := &Blank{}
 	ctx.Add(b)
@@ -176,6 +194,7 @@ type Blank struct {
 	Comment *string
 }
 
+// COMMENT adds a comment to the blank line.
 func (b *Blank) COMMENT(s string) *Blank {
 	if b.Comment != nil {
 		panic("multiple COMMENT calls")
@@ -244,6 +263,7 @@ func (p *shared[P]) recDecl() {
 	}
 }
 
+// DESCRIPTION sets the description field of the processor.
 func (p *shared[P]) DESCRIPTION(s string) P {
 	if p.Description != nil {
 		panic("multiple DESCRIPTION calls")
@@ -252,6 +272,7 @@ func (p *shared[P]) DESCRIPTION(s string) P {
 	return p.parent
 }
 
+// COMMENT adds a, potentially multi-line, comment before the processor.
 func (p *shared[P]) COMMENT(s string) P {
 	if p.Comment != nil {
 		panic("multiple COMMENT calls")
@@ -260,6 +281,8 @@ func (p *shared[P]) COMMENT(s string) P {
 	return p.parent
 }
 
+// TAG sets the tag field of the processor. If the tag is not unique in the
+// pipeline, it will have a numeric suffix added to make it unique.
 func (p *shared[P]) TAG(s string) P {
 	if p.tagCalled {
 		panic("multiple TAG calls")
@@ -283,6 +306,7 @@ func (p *shared[P]) retag(s string) {
 	p.Tag = s
 }
 
+// IF sets the if condition of the processor.
 func (p *shared[P]) IF(s string) P {
 	if p.Condition != nil {
 		panic("multiple IF calls")
@@ -294,6 +318,7 @@ func (p *shared[P]) IF(s string) P {
 	return p.parent
 }
 
+// IGNORE_FAILURE sets the ignore_failure field to t for the processor.
 func (p *shared[P]) IGNORE_FAILURE(t bool) P {
 	if p.IgnoreFailure != nil {
 		panic("multiple ALLOW_DUPLICATES calls")
@@ -302,6 +327,9 @@ func (p *shared[P]) IGNORE_FAILURE(t bool) P {
 	return p.parent
 }
 
+// ON_ERROR sets the on_failure field to the processors in h. Processors that
+// are added to a processor's on_failure field are removed from the global
+// context.
 func (p *shared[P]) ON_ERROR(h ...Renderer) P {
 	if p.ErrorHandler != nil {
 		panic("multiple ON_ERROR calls")
@@ -363,6 +391,7 @@ func gutter(s string) (string, error) {
 	return strings.TrimRightFunc(strings.Join(lines[blanks:], "\n"), unicode.IsSpace), nil
 }
 
+// PathCleaner is applied to tags before they are used.
 var PathCleaner = strings.NewReplacer(".", "_", " ", "_")
 
 type Definition struct {

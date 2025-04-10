@@ -6,6 +6,8 @@ import (
 	"text/template"
 )
 
+// URI_PARTS adds a uri_parts processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/uri-parts-processor.html.
 func URI_PARTS(dst, src string) *URIPartsProc {
 	var pDst *string

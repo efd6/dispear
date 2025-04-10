@@ -6,6 +6,8 @@ import (
 	"text/template"
 )
 
+// GEO_GRID adds a geo_grid processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/ingest-geo-grid-processor.html.
 func GEO_GRID(dst, src, typ string) *GeoGridProc {
 	var pDst *string

@@ -6,6 +6,8 @@ import (
 	"text/template"
 )
 
+// APPEND adds an append processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/append-processor.html.
 func APPEND(dst string, val any) *AppendProc {
 	p := &AppendProc{Field: dst, Value: &val}

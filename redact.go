@@ -7,6 +7,8 @@ import (
 	"text/template"
 )
 
+// REDACT adds a redact processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/redact-processor.html.
 func REDACT(src string, patterns ...string) *RedactProc {
 	p := &RedactProc{Field: src, Patterns: patterns}

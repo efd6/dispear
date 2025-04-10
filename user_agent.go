@@ -6,6 +6,8 @@ import (
 	"text/template"
 )
 
+// USER_AGENT adds a user_agent processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/user-agent-processor.html.
 func USER_AGENT(dst, src string) *UserAgentProc {
 	var pDst *string

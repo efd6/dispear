@@ -6,6 +6,8 @@ import (
 	"text/template"
 )
 
+// DISSECT adds a dissect processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/dissect-processor.html.
 func DISSECT(src, pattern string) *DissectProc {
 	p := &DissectProc{Field: src, Pattern: pattern}

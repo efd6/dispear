@@ -6,6 +6,8 @@ import (
 	"text/template"
 )
 
+// SPLIT adds a split processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/split-processor.html.
 func SPLIT(dst, src, sep string) *SplitProc {
 	var pDst *string

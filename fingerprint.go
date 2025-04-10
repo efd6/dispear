@@ -7,6 +7,8 @@ import (
 	"text/template"
 )
 
+// FINGERPRINT adds a fingerprint processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/fingerprint-processor.html.
 func FINGERPRINT(dst string, src ...string) *FingerprintProc {
 	var pDst *string

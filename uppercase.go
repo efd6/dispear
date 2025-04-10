@@ -6,6 +6,8 @@ import (
 	"text/template"
 )
 
+// UPPERCASE adds an uppercase processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/uppercase-processor.html.
 func UPPERCASE(dst, src string) *UppercaseProc {
 	var pDst *string

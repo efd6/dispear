@@ -6,6 +6,8 @@ import (
 	"text/template"
 )
 
+// BYTES adds a bytes processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/bytes-processor.html.
 func BYTES(dst, src string) *BytesProc {
 	var pDst *string

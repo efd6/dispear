@@ -6,6 +6,8 @@ import (
 	"text/template"
 )
 
+// CONVERT adds a convert processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/convert-processor.html.
 func CONVERT(dst, src, typ string) *ConvertProc {
 	var pDst *string

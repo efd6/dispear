@@ -6,6 +6,8 @@ import (
 	"text/template"
 )
 
+// TRIM adds a trim processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/trim-processor.html.
 func TRIM(dst, src string) *TrimProc {
 	var pDst *string

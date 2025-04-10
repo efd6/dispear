@@ -7,6 +7,8 @@ import (
 	"text/template"
 )
 
+// INFERENCE adds an inference processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/inference-processor.html.
 func INFERENCE(dst, id string) *InferenceProc {
 	var pDst *string

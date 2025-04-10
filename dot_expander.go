@@ -6,6 +6,8 @@ import (
 	"text/template"
 )
 
+// DOT_EXPANDER adds a dot_expander processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/dot-expand-processor.html.
 func DOT_EXPANDER(src string) *DotExpanderProc {
 	p := &DotExpanderProc{Field: src}

@@ -6,6 +6,8 @@ import (
 	"text/template"
 )
 
+// GSUB adds a gsub processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/gsub-processor.html.
 func GSUB(dst, src, match, replace string) *GsubProc {
 	var pDst *string

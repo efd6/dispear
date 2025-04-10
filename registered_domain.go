@@ -6,6 +6,8 @@ import (
 	"text/template"
 )
 
+// REGISTERED_DOMAIN adds a registered_domain processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/registered-domain-processor.html.
 func REGISTERED_DOMAIN(dst, src string) *RegisteredDomainProc {
 	var pDst *string

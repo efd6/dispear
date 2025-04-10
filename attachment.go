@@ -7,6 +7,8 @@ import (
 	"text/template"
 )
 
+// ATTACHMENT adds an attachment processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/attachment.html.
 func ATTACHMENT(dst, src string) *AttachmentProc {
 	var pDst *string

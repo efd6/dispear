@@ -7,6 +7,8 @@ import (
 	"text/template"
 )
 
+// REROUTE adds a reroute processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/reroute-processor.html.
 func REROUTE(namespace, dataset, destination string) *RerouteProc {
 	var pNamespace, pDataset, pDestination *string

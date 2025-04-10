@@ -9,6 +9,8 @@ import (
 	"text/template"
 )
 
+// FOREACH adds a foreach processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/foreach-processor.html.
 func FOREACH(src string, proc Renderer) *ForeachProc {
 	ctx.processors = slices.DeleteFunc(ctx.processors, func(e Renderer) bool {

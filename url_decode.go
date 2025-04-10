@@ -6,6 +6,8 @@ import (
 	"text/template"
 )
 
+// URL_DECODE adds a url_decode processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/urldecode-processor.html.
 func URL_DECODE(dst, src string) *URLDecodeProc {
 	var pDst *string

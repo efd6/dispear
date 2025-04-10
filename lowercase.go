@@ -6,6 +6,8 @@ import (
 	"text/template"
 )
 
+// LOWERCASE adds a lowercase processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/lowercase-processor.html.
 func LOWERCASE(dst, src string) *LowercaseProc {
 	var pDst *string

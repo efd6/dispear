@@ -6,6 +6,8 @@ import (
 	"text/template"
 )
 
+// RENAME adds a rename processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/rename-processor.html.
 func RENAME(from, to string) *RenameProc {
 	p := &RenameProc{Field: from, TargetField: to}

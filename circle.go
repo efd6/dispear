@@ -6,6 +6,8 @@ import (
 	"text/template"
 )
 
+// CIRCLE adds a circle processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/ingest-circle-processor.html.
 func CIRCLE(dst, src, typ string, err float64) *CircleProc {
 	var pDst *string

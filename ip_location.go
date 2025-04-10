@@ -7,6 +7,8 @@ import (
 	"text/template"
 )
 
+// GEOIP adds a geoip processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/geoip-processor.html.
 func GEOIP(dst, src string) *IPLocationProc {
 	var pDst *string
@@ -25,6 +27,8 @@ func GEOIP(dst, src string) *IPLocationProc {
 	return p
 }
 
+// IP_LOCATION adds an ip_location processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/ip-location-processor.html.
 func IP_LOCATION(dst, src string) *IPLocationProc {
 	var pDst *string

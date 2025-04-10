@@ -6,6 +6,8 @@ import (
 	"text/template"
 )
 
+// SET_SECURITY_USER adds a set_security_user processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/ingest-node-set-security-user-processor.html.
 func SET_SECURITY_USER(dst string) *SetSecurityUserProc {
 	p := &SetSecurityUserProc{Field: dst}

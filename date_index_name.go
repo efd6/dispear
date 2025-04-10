@@ -6,6 +6,8 @@ import (
 	"text/template"
 )
 
+// DATE_INDEX_NAME adds a date_index_name processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/date-index-name-processor.html.
 func DATE_INDEX_NAME(src, rounding string) *DateIndexNameProc {
 	p := &DateIndexNameProc{Field: src, Rounding: rounding}

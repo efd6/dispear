@@ -6,6 +6,8 @@ import (
 	"text/template"
 )
 
+// SCRIPT adds a script processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/script-processor.html.
 func SCRIPT() *ScriptProc {
 	p := &ScriptProc{}

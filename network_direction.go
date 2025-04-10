@@ -5,6 +5,8 @@ import (
 	"text/template"
 )
 
+// NETWORK_DIRECTION adds a network_direction processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/network-direction-processor.html.
 func NETWORK_DIRECTION(dst, srcip, dstip string) *NetworkDirectionProc {
 	var pDst, pSrcip, pDstip *string

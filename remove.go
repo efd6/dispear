@@ -7,6 +7,8 @@ import (
 	"text/template"
 )
 
+// REMOVE adds a remove processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/remove-processor.html.
 func REMOVE(fields ...string) *RemoveProc {
 	p := &RemoveProc{Fields: fields}

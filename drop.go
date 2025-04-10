@@ -5,6 +5,8 @@ import (
 	"text/template"
 )
 
+// DROP adds a drop processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/drop-processor.html.
 func DROP(reason string) *StopProc {
 	p := &StopProc{Flavour: "drop"}
@@ -19,6 +21,9 @@ func DROP(reason string) *StopProc {
 	return p
 }
 
+// TERMINATE adds a terminate processor to the global context.
+//
+// See https://www.elastic.co/guide/en/elasticsearch/reference/current/terminate-processor.html.
 func TERMINATE(reason string) *StopProc {
 	p := &StopProc{Flavour: "terminate"}
 	p.recDecl()

@@ -7,6 +7,8 @@ import (
 	"text/template"
 )
 
+// GROK adds a grok processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/grok-processor.html.
 func GROK(src string, patterns ...string) *GrokProc {
 	p := &GrokProc{Field: src, Patterns: patterns}

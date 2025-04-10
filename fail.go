@@ -6,6 +6,8 @@ import (
 	"text/template"
 )
 
+// FAIL adds a fail processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/fail-processor.html.
 func FAIL(message string) *FailProc {
 	p := &FailProc{Message: message}

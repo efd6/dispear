@@ -6,6 +6,8 @@ import (
 	"text/template"
 )
 
+// CSV adds a csv processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/csv-processor.html.
 func CSV(dst, src string) *CSVProc {
 	p := &CSVProc{Field: src, TargetField: dst}

@@ -8,6 +8,9 @@ import (
 	"text/template"
 )
 
+// PIPELINE adds a pipeline processor to the global context. Only the name of
+// the target pipeline is required. The template will be constructed by dispear.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/pipeline-processor.html.
 func PIPELINE(name string) *PipelineProc {
 	p := &PipelineProc{Name: name}

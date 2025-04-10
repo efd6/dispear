@@ -6,6 +6,8 @@ import (
 	"text/template"
 )
 
+// JOIN adds a join processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/join-processor.html.
 func JOIN(dst, src, sep string) *JoinProc {
 	var pDst *string

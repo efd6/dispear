@@ -6,6 +6,8 @@ import (
 	"text/template"
 )
 
+// SORT adds a sort processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/sort-processor.html.
 func SORT(dst, src, order string) *SortProc {
 	var pDst, pOrder *string

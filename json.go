@@ -6,6 +6,8 @@ import (
 	"text/template"
 )
 
+// JSON adds a json processor to the global context.
+//
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/json-processor.html.
 func JSON(dst, src string) *JSONProc {
 	var pDst *string
