@@ -3,6 +3,7 @@ package dispear
 import (
 	"bytes"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"math"
@@ -66,6 +67,18 @@ func (c *Context) Add(p Renderer) {
 }
 
 func (c *Context) Generate() error {
+	w := os.Stdout
+	out := flag.String("out", "", "path for writing generated pipeline to (stdout if empty)")
+	flag.Parse()
+	if *out != "" {
+		f, err := os.Create(*out)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		w = f
+	}
+
 	var buf bytes.Buffer
 	for t, retaggers := range c.tags {
 		if len(retaggers) < 2 {
@@ -111,11 +124,10 @@ on_failure:{{range .}}
 {{- end -}}
 {{end}}
 `))
-	pipelineTemplate.Execute(os.Stdout, map[string]any{
+	return pipelineTemplate.Execute(w, map[string]any{
 		"pipeline":   c.pipeline,
 		"processors": indent(buf.String(), 2),
 	})
-	return nil
 }
 
 var templateHelpers = template.FuncMap{

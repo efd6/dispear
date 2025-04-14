@@ -1,0 +1,2546 @@
+cd ${PKG_ROOT}
+go run ${WORK}/main.go -out ${WORK}/out.txt
+cd ${WORK}
+cmp out.txt want.txt
+
+-- main.go --
+package main
+
+import (
+	"fmt"
+	"strconv"
+	"strings"
+
+	. "github.com/efd6/dispear"
+)
+
+const (
+	ECSVersion = "8.11.0"
+	PkgRoot    = "ocsf"
+)
+
+func main() {
+	DESCRIPTION("Pipeline for processing Amazon Security Lake Events.")
+	ON_FAILURE(
+		SET("event.pipeline").VALUE("pipeline_error"),
+		APPEND("event.message", errorFormat),
+		APPEND("tags", "preserve_original_event").
+			ALLOW_DUPLICATES(false),
+	)
+	BLANK().COMMENT("Base Event docs: https://schema.ocsf.io/1.1.0/base_event?extensions=")
+	BLANK()
+
+	SET("ecs.version").VALUE(ECSVersion)
+	RENAME("message", "event.original").
+		IF("ctx.event?.original == null").
+		IGNORE_MISSING(true)
+	JSON(PkgRoot, "event.original").ON_ERROR(
+		APPEND("error.message", errorFormat),
+	)
+	SCRIPT().
+		DESCRIPTION("Recursively traverses the ocsf object to convert suspected timestamps to milliseconds.").
+		TAG("convert_timestamps_to_milliseconds").
+		SOURCE(`
+            def convertToMilliseconds(long timestamp) {
+                if ((long)1e19 - 1 < timestamp) {
+                    throw new IllegalArgumentException("Timestamp format not recognized: " + timestamp);
+                } else if ((long)1e16 - 1 < timestamp) {
+                    return timestamp / 1000000;  // Convert nanoseconds to milliseconds
+                } else if ((long)1e13 - 1 < timestamp) {
+                    return timestamp / 1000;  // Convert microseconds to milliseconds
+                } else if ((long)1e10 - 1 < timestamp) {
+                    return timestamp;  // Already in milliseconds, no conversion needed
+                } else {
+                    return timestamp * 1000;  // Convert seconds to milliseconds
+                }
+            }
+
+            def processFields(Map fields) {
+                for (entry in fields.entrySet()) {
+                    def fieldName = entry.getKey();
+                    def fieldValue = entry.getValue();
+                    // Check if the field is a nested object (Map)
+                    if (fieldValue instanceof Map) {
+                        // Recursively process nested objects
+                        processFields((Map) fieldValue);
+                    } else if (fieldName.endsWith('time') || fieldName.endsWith('_time')) {
+                        // If the field name ends with "time" or "_time" and is a number, convert it
+                        if (fieldValue instanceof Number) {
+                            fields[fieldName] = convertToMilliseconds(((Number) fieldValue).longValue());
+                        }
+                    }
+                }
+                return null;
+            }
+            processFields(ctx.ocsf);
+	`).ON_ERROR(
+		APPEND("error.message", errorFormat),
+	)
+
+	for _, r := range []struct{ f, t string }{
+		{f: "resource", t: "resources"},
+		{f: "finding_info_list", t: "finding_info"},
+	} {
+		RENAME(r.f, r.t).
+			IF(fmt.Sprintf("ctx.ocsf?.%s == null", r.t)).
+			IGNORE_MISSING(true)
+	}
+	CONVERT("", "ocsf.class_uid", "string").
+		IGNORE_MISSING(true)
+
+	BLANK()
+
+	BLANK().COMMENT("Set event.kind based on ocsf.class_uid.")
+	for _, s := range []struct{ uids, val string }{
+		{
+			uids: uidList(1001, 1002, 1003, 1004, 1005, 1006, 1007, 3001, 3002,
+				3003, 3005, 3006, 4001, 4002, 4003, 4004, 4005, 4006, 4007,
+				4008, 4009, 4010, 4011, 4012, 4013, 5001, 5002, 5003, 5004,
+				5019, 6001, 6002, 6003, 6004, 6005, 6006, 6007),
+			val: "event",
+		},
+		{
+			uids: uidList(2001, 2002, 2003, 2004, 2005),
+			val:  "alert",
+		},
+	} {
+		SET("event.kind").
+			IF(fmt.Sprintf("ctx.ocsf?.class_uid != null && [%s].contains(ctx.ocsf.class_uid)", s.uids)).
+			VALUE(s.val)
+	}
+
+	BLANK()
+
+	BLANK().COMMENT("Set event.category based on ocsf.class_uid.")
+	for _, a := range []struct{ uids, cond, val string }{
+		{
+			uids: uidList(2001), cond: " && ctx.ocsf.malware != null",
+			val: "malware",
+		},
+		{
+			uids: uidList(2001, 2002, 2003, 2004, 2005), cond: " && ctx.ocsf.vulnerabilities != null",
+			val: "vulnerability",
+		},
+		{
+			uids: uidList(3001, 3005, 3006),
+			val:  "iam",
+		},
+		{
+			uids: uidList(3002),
+			val:  "authentication",
+		},
+		{
+			uids: uidList(3003),
+			val:  "session",
+		},
+		{
+			uids: uidList(4001, 4003, 4004, 4005, 4007, 4008, 4010, 4013),
+			val:  "network",
+		},
+		{
+			uids: uidList(4002, 4006),
+			val:  "api",
+		},
+		{
+			uids: uidList(1001, 4006, 4008, 4010, 4011, 6006),
+			val:  "file",
+		},
+		{
+			uids: uidList(4009, 4011, 4012),
+			val:  "email",
+		},
+		{
+			uids: uidList(6003, 6004),
+			val:  "web",
+		},
+		{
+			uids: uidList(6002),
+			val:  "package",
+		},
+		{
+			uids: uidList(5002),
+			val:  "configuration",
+		},
+		{
+			uids: uidList(1002, 1003),
+			val:  "driver",
+		},
+		{
+			uids: uidList(1007),
+			val:  "process",
+		},
+		{
+			uids: uidList(1001, 1002, 1003, 1007, 2001, 2002, 2003, 2004, 2005,
+				3001, 3002, 3003, 3005, 3006, 4001, 4002, 4003, 4004, 4005,
+				4006, 4007, 4008, 4009, 4010, 4011, 4012, 4013, 5001, 5002,
+				5003, 5004, 5019, 6002, 6003, 6004, 6005, 6006, 6007),
+			val: "info",
+		},
+		{
+			uids: uidList(3001, 3006),
+			val:  "user",
+		},
+		{
+			uids: uidList(3005),
+			val:  "group",
+		},
+		{
+			uids: uidList(4003, 4004, 4005, 4007, 4008),
+			val:  "protocol",
+		},
+
+		{
+			uids: uidList(1001, 2005, 3001, 4006, 5002),
+			cond: " && ['Create','File Create','Log'].contains(ctx.ocsf.activity_name)",
+			val:  "creation",
+		},
+		{
+			uids: uidList(1001, 4006, 4010, 5002, 6004),
+			cond: " && ['Read','File Open','Preview','Open','Access Grant','Access Deny','Access Revoke','Access Error','Log'].contains(ctx.ocsf.activity_name)",
+			val:  "access",
+		},
+		{
+			uids: uidList(1001, 3001, 4010, 6002),
+			cond: " && ['Delete','Remove'].contains(ctx.ocsf.activity_name)",
+			val:  "deletion",
+		},
+		{
+			uids: uidList(1007, 3002, 4001, 4013, 4007, 6002, 6007),
+			cond: " && ['Launch','Logon','Open','Start','Started','Symmetric Active Exchange','Client Synchronization','Broadcast','Control'].contains(ctx.ocsf.activity_name)",
+			val:  "start",
+		},
+		{
+			uids: uidList(1007, 2005, 3002, 4001, 4007, 4013, 6002, 6007),
+			cond: " && ['Terminate','Logoff','Close','Completed','Stop','Symmetric Passive Response','Server Response','Private Use Case','Other'].contains(ctx.ocsf.activity_name)",
+			val:  "end",
+		},
+		{
+			uids: uidList(4001, 4003, 4004, 4007),
+			cond: " && ['Refuse','Decline'].contains(ctx.ocsf.activity_name)",
+			val:  "denied",
+		},
+		{
+			uids: uidList(4004),
+			cond: " && ['Ack'].contains(ctx.ocsf.activity_name)",
+			val:  "allowed",
+		},
+		{
+			uids: uidList(1001, 2005, 4006, 4010),
+			cond: " && ['Update','File Supersede','File Overwrite','Update','Rename'].contains(ctx.ocsf.activity_name)",
+			val:  "change",
+		},
+		{
+			uids: uidList(4005),
+			cond: " && ['Connect Request','Connect Response'].contains(ctx.ocsf.activity_name)",
+			val:  "connection",
+		},
+		{
+			uids: uidList(6002, 5004),
+			cond: " && ['Install','Log','Collect'].contains(ctx.ocsf.activity_name)",
+			val:  "installation",
+		},
+		{
+			uids: uidList(6004, 6007),
+			cond: " && ['Access Error','Error'].contains(ctx.ocsf.activity_name)",
+			val:  "error",
+		},
+	} {
+		APPEND("event.category", a.val).
+			TAG(fmt.Sprintf("append_%s_into_event_category", a.val)).
+			IF(fmt.Sprintf("ctx.ocsf?.class_uid != null && [%s].contains(ctx.ocsf.class_uid)%s", a.uids, a.val, a.cond)).
+			ALLOW_DUPLICATES(false)
+	}
+
+	BLANK()
+
+	BLANK().COMMENT("Set cloud details.")
+	for _, s := range []struct{ dst, src string }{
+		{dst: "cloud.account.id", src: "ocsf.cloud.account.uid"},
+		{dst: "cloud.account.id", src: "ocsf.cloud.account.uid"},
+		{dst: "cloud.account.name", src: "ocsf.cloud.account.name"},
+		{dst: "cloud.availability_zone", src: "ocsf.cloud.zone"},
+		{dst: "cloud.project.id", src: "ocsf.cloud.project_uid"},
+		{dst: "cloud.provider", src: "ocsf.cloud.provider"},
+		{dst: "cloud.region", src: "ocsf.cloud.region"},
+	} {
+		SET(s.dst).COPY_FROM(s.src).IGNORE_EMPTY(true)
+	}
+
+	LOWERCASE("event.action", "ocsf.activity_name").
+		IGNORE_MISSING(true).
+		ON_ERROR(removeErrorHandler("ocsf.activity_name")...)
+	GSUB("", "event.action", "[: ]", "-").
+		IGNORE_MISSING(true).
+		ON_ERROR(removeErrorHandler("event.action")...)
+	SET("event.code").
+		COPY_FROM("ocsf.metadata.event_code").
+		IGNORE_EMPTY(true)
+	CONVERT("", "ocsf.duration", "long").
+		IGNORE_MISSING(true).
+		ON_ERROR(removeErrorHandler("ocsf.duration")...)
+	SCRIPT().
+		DESCRIPTION("Convert duration from milliseconds to nanoseconds.").
+		TAG("script_duration_ms_to_ns").
+		IF("ctx.ocsf?.duration != null").
+		SOURCE("ctx.event.duration = ctx.ocsf.duration * 1000000;")
+	SET("event.id").COPY_FROM("ocsf.metadata.uid").
+		IGNORE_EMPTY(true)
+	SET("event.provider").COPY_FROM("ocsf.metadata.log_provider").
+		IGNORE_EMPTY(true)
+	SET("event.provider").COPY_FROM("ocsf.metadata.product.vendor_name").
+		IF("ctx.ocsf?.metadata?.log_provider == null").
+		IGNORE_EMPTY(true)
+	CONVERT("", "ocsf.metadata.sequence", "long").
+		IGNORE_MISSING(true).
+		ON_ERROR(removeErrorHandler("ocsf.metadata.sequence")...)
+	SET("event.sequence").COPY_FROM("ocsf.metadata.sequence").
+		IGNORE_EMPTY(true)
+	SET("message").COPY_FROM("ocsf.message").
+		IGNORE_EMPTY(true)
+	FOREACH("ocsf.metadata.labels",
+		APPEND("tags", "{{{_ingest._value}}}").
+			ALLOW_DUPLICATES(false),
+	).IF("ctx.ocsf?.metadata?.labels instanceof List")
+	for _, s := range []string{
+		"ocsf.activity_id",
+		"ocsf.category_uid",
+		"ocsf.cloud.account.type_id",
+		"ocsf.resource.owner.type_id",
+	} {
+		CONVERT("", s, "string").
+			IGNORE_MISSING(true)
+	}
+	for _, s := range []string{
+		"ocsf.api.response.code",
+		"ocsf.count",
+	} {
+		CONVERT("", s, "long").
+			IGNORE_MISSING(true).
+			ON_ERROR(removeErrorHandler(s)...)
+	}
+	DATE("ocsf.end_time_dt", "ocsf.end_time_dt", "ISO8601").
+		IF("ctx.ocsf?.end_time_dt != null && ctx.ocsf.end_time_dt != ''").
+		ON_ERROR(removeErrorHandler("ocsf.end_time_dt")...)
+	SET("event.end").
+		COPY_FROM("ocsf.end_time_dt").
+		IGNORE_EMPTY(true)
+	DATE("ocsf.end_time", "ocsf.end_time", "UNIX_MS").
+		IF("ctx.ocsf?.end_time != null && ctx.ocsf.end_time != ''").
+		ON_ERROR(removeErrorHandler("ocsf.end_time")...)
+	SET("event.end").
+		COPY_FROM("ocsf.end_time").
+		IGNORE_EMPTY(true)
+	for _, d := range []struct {
+		dst, src, cond, format string
+	}{
+		{
+			src:  "ocsf.time_dt",
+			cond: "ctx.ocsf?.time_dt != null && ctx.ocsf.time_dt != ''", format: "ISO8601",
+		},
+		{
+			src:  "ocsf.time",
+			cond: "ctx.ocsf?.time != null && ctx.ocsf.time != ''", format: "UNIX_MS",
+		},
+		{
+			dst: "ocsf.time_dt", src: "ocsf.time_dt",
+			cond: "ctx.ocsf?.time_dt != null && ctx.ocsf.time_dt != ''", format: "ISO8601",
+		},
+		{
+			dst: "ocsf.time", src: "ocsf.time",
+			cond: "ctx.ocsf?.time != null && ctx.ocsf.time != ''", format: "UNIX_MS",
+		},
+		{
+			dst: "ocsf.metadata.logged_time_dt", src: "ocsf.metadata.logged_time_dt",
+			cond: "ctx.ocsf?.metadata?.logged_time_dt != null && ctx.ocsf.metadata.logged_time_dt != ''", format: "ISO8601",
+		},
+		{
+			dst: "ocsf.metadata.logged_time", src: "ocsf.metadata.logged_time",
+			cond: "ctx.ocsf?.metadata?.logged_time != null && ctx.ocsf.metadata.logged_time != ''", format: "UNIX_MS",
+		},
+		{
+			dst: "ocsf.metadata.modified_time_dt", src: "ocsf.metadata.modified_time_dt",
+			cond: "ctx.ocsf?.metadata?.modified_time_dt != null && ctx.ocsf.metadata.modified_time_dt != ''", format: "ISO8601",
+		},
+		{
+			dst: "ocsf.metadata.modified_time", src: "ocsf.metadata.modified_time",
+			cond: "ctx.ocsf?.metadata?.modified_time != null && ctx.ocsf.metadata.modified_time != ''", format: "UNIX_MS",
+		},
+		{
+			dst: "ocsf.metadata.processed_time_dt", src: "ocsf.metadata.processed_time_dt",
+			cond: "ctx.ocsf?.metadata?.processed_time_dt != null && ctx.ocsf.metadata.processed_time_dt != ''", format: "ISO8601",
+		},
+		{
+			dst: "ocsf.metadata.processed_time", src: "ocsf.metadata.processed_time",
+			cond: "ctx.ocsf?.metadata?.processed_time != null && ctx.ocsf.metadata.processed_time != ''", format: "UNIX_MS",
+		},
+	} {
+		DATE(d.dst, d.src, d.format).
+			IF(d.cond).
+			ON_ERROR(removeErrorHandler("ocsf.time_dt")...)
+	}
+
+	FOREACH("ocsf.observables",
+		CONVERT("", "_ingest._value.reputation.base_score", "double").
+			IGNORE_MISSING(true).
+			ON_ERROR(removeErrorHandler("_ingest._value.reputation.base_score")...),
+	).IF("ctx.ocsf?.observables instanceof List").
+		IGNORE_FAILURE(true)
+	for _, f := range []string{
+		".reputation.score_id",
+		".type_id",
+	} {
+		FOREACH("ocsf.observables",
+			CONVERT("", "_ingest._value"+f, "string").
+				IGNORE_MISSING(true),
+		).IF("ctx.ocsf?.observables instanceof List").
+			IGNORE_FAILURE(true)
+	}
+	CONVERT("", "ocsf.severity_id", "long").
+		IGNORE_MISSING(true).
+		ON_ERROR(removeErrorHandler("ocsf.severity_id")...)
+	SET("event.severity").
+		COPY_FROM("ocsf.severity_id").
+		IGNORE_EMPTY(true)
+
+	for _, d := range []struct {
+		src, cond, format string
+	}{
+		{src: "ocsf.start_time_dt", cond: "ctx.ocsf?.start_time_dt != null && ctx.ocsf.start_time_dt != ''", format: "ISO8601"},
+		{src: "ocsf.start_time", cond: "ctx.ocsf?.start_time != null && ctx.ocsf.start_time != ''", format: "UNIX_MS"},
+	} {
+		DATE(d.src, d.src, d.format).
+			IF(d.cond).
+			ON_ERROR(removeErrorHandler(d.src)...)
+		SET("event.start").
+			COPY_FROM(d.src).
+			IGNORE_EMPTY(true)
+	}
+	CONVERT("", "ocsf.status_id", "string").
+		IGNORE_MISSING(true)
+	for i, val := range []string{
+		0: "unknown",
+		1: "success",
+		2: "failure",
+	} {
+		SET("event.outcome").IF(fmt.Sprintf("ctx.ocsf?.status_id == '%d'", i)).VALUE(val)
+	}
+	CONVERT("", "ocsf.timezone_offset", "long").
+		IGNORE_MISSING(true).
+		ON_ERROR(removeErrorHandler("ocsf.timezone_offset")...)
+	CONVERT("", "ocsf.type_uid", "string").
+		IGNORE_MISSING(true)
+	JSON("", "ocsf.raw_data").
+		IF("ctx.ocsf?.raw_data instanceof String").
+		ON_ERROR(RENAME("ocsf.raw_data", "ocsf.raw_data_keyword"))
+
+	for _, p := range []struct{ uids, cond, name string }{
+		{
+			uids: uidList(1001, 1002, 1003, 1004, 1005, 1006, 1007, 2002, 2003,
+				3001, 3002, 3003, 3004, 3005, 4001, 4002, 4003, 4004, 4005,
+				4006, 4007, 4008, 4009, 4010, 4011, 4012, 4013, 5001, 5002,
+				5003, 5019, 6001, 6002, 6003, 6004, 6005, 6006, 6007),
+			cond: " && ctx.ocsf.actor != null",
+			name: "pipeline_object_actor",
+		},
+		{
+			uids: uidList(1001, 1002, 1003, 1004, 1005, 1006, 1007, 2001, 4001,
+				4002, 4003, 4005, 4006, 4007, 4008, 4009, 4011, 4012, 4013),
+			cond: " && ctx.ocsf.attacks != null",
+			name: "pipeline_object_attack",
+		},
+		{
+			uids: uidList(4001, 4002, 4003, 4005, 4006, 4007, 4008, 4013, 6006),
+			cond: " && ctx.ocsf.connection_info != null",
+			name: "pipeline_object_network_connection_info",
+		},
+		{
+			uids: uidList(1001, 1002, 1003, 1004, 1005, 1006, 1007, 2002, 2003,
+				3001, 3002, 3003, 3004, 3005, 4001, 4002, 4003, 4004, 4005,
+				4006, 4007, 4008, 4009, 4011, 4012, 4013, 5001, 5002, 5004,
+				5019, 6001, 6002, 6004, 6007),
+			cond: " && ctx.ocsf.device != null",
+			name: "pipeline_object_device",
+		},
+		{
+			uids: uidList(3001, 3002, 4002, 6003, 6004, 6005),
+			cond: " && ctx.ocsf.http_request != null",
+			name: "pipeline_object_http_request",
+		},
+		{
+			uids: uidList(2001, 4001, 4002, 4003, 4005, 4006, 4007, 4008, 4009,
+				4011, 4012, 4013),
+			cond: " && ctx.ocsf.malware != null",
+			name: "pipeline_object_malware",
+		},
+		{
+			uids: uidList(3001, 3002, 3003, 3005, 4001, 4002, 4003, 4004, 4005,
+				4006, 4007, 4008, 4009, 4010, 4013, 6001, 6003, 6004, 6005,
+				6006),
+			cond: " && (ctx.ocsf.dst_endpoint != null || ctx.ocsf.src_endpoint != null)",
+			name: "pipeline_object_network_endpoint",
+		},
+		{
+			uids: uidList(1004, 1007, 2001),
+			cond: " && ctx.ocsf.process != null",
+			name: "pipeline_object_process",
+		},
+		{
+			uids: uidList(4001, 4002, 4003, 4005, 4006, 4007, 4008, 4013),
+			cond: " && ctx.ocsf.proxy != null",
+			name: "pipeline_object_proxy",
+		},
+		{
+			uids: uidList(4001, 4002, 4003, 4005, 4006, 4007, 4008, 4013),
+			cond: " && ctx.ocsf.tls != null",
+			name: "pipeline_object_tls",
+		},
+		{
+			uids: uidList(4001, 4002, 4003, 4005, 4006, 4007, 4008, 4013),
+			cond: " && ctx.ocsf.traffic != null",
+			name: "pipeline_object_traffic",
+		},
+		{
+			uids: uidList(2005, 3001, 3002, 3003, 3005, 3006, 5003),
+			cond: " && ctx.ocsf.user != null",
+			name: "pipeline_object_user",
+		},
+		{
+			uids: uidList(1001, 4006, 4010, 4011, 6006),
+			name: "pipeline_object_file",
+		},
+		{
+			uids: uidList(1002, 1005, 1006),
+			name: "pipeline_object_system_activity_helper",
+		},
+	} {
+		PIPELINE(p.name).
+			IF(fmt.Sprintf("ctx.ocsf?.class_uid != null && [%s].contains(ctx.ocsf.class_uid)%s", p.uids, p.cond)).
+			IGNORE_MISSING(true)
+	}
+	for _, p := range []struct {
+		uid  int
+		name string
+	}{
+		{uid: 1, name: "pipeline_category_system_activity"},
+		{uid: 2, name: "pipeline_category_findings"},
+		{uid: 3, name: "pipeline_category_identity_and_access_management"},
+		{uid: 4, name: "pipeline_category_network_activity"},
+		{uid: 6, name: "pipeline_category_application_activity"},
+		{uid: 5, name: "pipeline_category_discovery"},
+	} {
+		PIPELINE(p.name).
+			IF(fmt.Sprintf("ctx.ocsf?.category_uid != null && ctx.ocsf.category_uid == '%d'", p.uid)).
+			IGNORE_MISSING(true)
+	}
+
+	for _, l := range []struct {
+		src, cond string
+	}{
+		{src: "ocsf.process.user.groups", cond: "ctx.ocsf?.process?.user?.groups instanceof List"},
+		{src: "ocsf.process.process.groups", cond: "ctx.ocsf?.process?.process?.groups instanceof List"},
+		{src: "ocsf.process.parent_process.user.groups", cond: "ctx.ocsf?.process?.parent_process?.user?.groups instanceof List"},
+		{src: "ocsf.actor.process.parent_process.user.groups", cond: "ctx.ocsf?.actor?.process?.parent_process?.user?.groups instanceof List"},
+		{src: "ocsf.actor.user.groups", cond: "ctx.ocsf?.actor?.user?.groups instanceof List"},
+		{src: "ocsf.job.user.groups", cond: "ctx.ocsf?.job?.user?.groups instanceof List"},
+		{src: "ocsf.user.groups", cond: "ctx.ocsf?.user?.groups instanceof List"},
+		{src: "ocsf.user_result.groups", cond: "ctx.ocsf?.user_result?.groups instanceof List"},
+	} {
+		FOREACH(l.src,
+			REMOVE(
+				"_ingest._value.uid",
+				"_ingest._value.name",
+			).IF("ctx.tags == null || !(ctx.tags.contains('preserve_duplicate_custom_fields'))").
+				TAG("remove_duplicate_custom_fields_from_"+PathCleaner.Replace(l.src)+"_array"),
+		).IF(l.cond).IGNORE_FAILURE(true)
+	}
+	for _, l := range []struct {
+		src, cond string
+		fields    []string
+	}{
+		{
+			src: "ocsf.tls.sans", cond: "ctx.ocsf?.tls?.sans instanceof List",
+			fields: []string{"_ingest._value.name"},
+		},
+		{
+			src: "ocsf.attacks", cond: "ctx.ocsf?.attacks instanceof List",
+			fields: []string{"_ingest._value.technique.uid", "_ingest._value.technique.name"},
+		},
+		{
+			src: "ocsf.vulnerabilities", cond: "ctx.ocsf?.vulnerabilities instanceof List",
+			fields: []string{
+				"_ingest._value.desc",
+				"_ingest._value.cve.uid",
+				"_ingest._value.references",
+				"_ingest._value.vendor_name",
+				"_ingest._value.cve.cvss.base_score",
+				"_ingest._value.cve.cvss.version",
+				"_ingest._value.severity",
+			},
+		},
+		{
+			src: "ocsf.answers", cond: "ctx.ocsf?.answers instanceof List",
+			fields: []string{
+				"_ingest._value.rdata",
+				"_ingest._value.packet_uid",
+				"_ingest._value.class",
+				"_ingest._value.type",
+				"_ingest._value.ttl",
+			},
+		},
+		{
+			src: "ocsf.web_resources", cond: "ctx.ocsf?.web_resources instanceof List",
+			fields: []string{
+				"_ingest._value.desc",
+				"_ingest._value.name",
+				"_ingest._value.type",
+			},
+		},
+		{
+			src: "ocsf.malware", cond: "ctx.ocsf?.malware instanceof List",
+			fields: []string{
+				"_ingest._value.cvss.base_score",
+				"_ingest._value.cvss.version",
+				"_ingest._value.uid",
+			},
+		},
+	} {
+		FOREACH(l.src,
+			REMOVE(l.fields...).IF("ctx.tags == null || !(ctx.tags.contains('preserve_duplicate_custom_fields'))").
+				TAG("remove_duplicate_custom_fields_from_"+PathCleaner.Replace(l.src)+"_array"),
+		).IF(l.cond).IGNORE_FAILURE(true)
+	}
+
+	REMOVE("aws").IGNORE_MISSING(true)
+	REMOVE(unused...).IGNORE_MISSING(true)
+	SCRIPT().
+		DESCRIPTION("Drops null/empty values recursively.").
+		TAG("painless_remove_null").
+		SOURCE(`
+            boolean drop(Object object) {
+              if (object == null || object == '') {
+                return true;
+              } else if (object instanceof Map) {
+                ((Map) object).values().removeIf(v -> drop(v));
+                return (((Map) object).size() == 0);
+              } else if (object instanceof List) {
+                ((List) object).removeIf(v -> drop(v));
+                return (((List) object).length == 0);
+              }
+              return false;
+            }
+            drop(ctx);
+		`)
+
+	for _, c := range []struct{ src, cond, typ string }{
+		{src: "dns.answers.ttl", cond: "ctx.dns?.answers?.ttl instanceof List", typ: "long"},
+		{src: "vulnerability.score.base", cond: "ctx.vulnerability?.score?.base instanceof List", typ: "double"},
+	} {
+		FOREACH(c.src,
+			CONVERT("", "_ingest._value", c.typ).
+				TAG("convert_"+c.src+"_to_"+c.typ).
+				IGNORE_MISSING(true).
+				ON_ERROR(removeErrorHandler("_ingest._value")...),
+		).IF(c.cond).
+			IGNORE_FAILURE(true)
+	}
+
+	BLANK()
+
+	SET("event.pipeline").COMMENT("Error handling.").
+		IF("ctx.error?.message != null").
+		VALUE("pipeline_error")
+	APPEND("tags", "preserve_original_event").
+		IF("ctx.error?.message != null").
+		ALLOW_DUPLICATES(false)
+
+	Generate()
+}
+
+func uidList(uids ...int) string {
+	s := make([]string, 0, len(uids))
+	for _, id := range uids {
+		s = append(s, strconv.Itoa(id))
+	}
+	return fmt.Sprintf("'%s'", strings.Join(s, "','"))
+}
+
+func removeErrorHandler(f string) []Renderer {
+	return []Renderer{
+		REMOVE(f).IGNORE_MISSING(true),
+		APPEND("error.message", errorFormat),
+	}
+}
+
+const errorFormat = "Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}"
+
+var unused = []string{
+	"ocsf.time",
+	"ocsf.cloud.account.uid",
+	"ocsf.cloud.account.name",
+	"ocsf.cloud.zone",
+	"ocsf.cloud.project_uid",
+	"ocsf.cloud.provider",
+	"ocsf.cloud.region",
+	"ocsf.metadata.event_code",
+	"ocsf.end_time",
+	"ocsf.metadata.uid",
+	"ocsf.metadata.log_provider",
+	"ocsf.metadata.sequence",
+	"ocsf.severity_id",
+	"ocsf.message",
+	"ocsf.metadata.labels",
+	"ocsf.process.container.uid",
+	"ocsf.process.container.image.name",
+	"ocsf.process.container.image.tag",
+	"ocsf.process.container.image.labels",
+	"ocsf.process.container.name",
+	"ocsf.process.container.runtime",
+	"ocsf.finding.created_time",
+	"ocsf.finding.src_url",
+	"ocsf.risk_score",
+	"ocsf.process.file.accessed_time",
+	"ocsf.process.file.created_time",
+	"ocsf.process.file.parent_folder",
+	"ocsf.process.file.uid",
+	"ocsf.process.file.mime_type",
+	"ocsf.process.file.modified_time",
+	"ocsf.process.file.name",
+	"ocsf.process.file.owner.name",
+	"ocsf.process.file.path",
+	"ocsf.process.file.size",
+	"ocsf.process.file.type",
+	"ocsf.process.file.owner.uid",
+	"ocsf.process.file.signature.certificate.issuer",
+	"ocsf.process.file.signature.certificate.expiration_time",
+	"ocsf.process.file.signature.certificate.serial_number",
+	"ocsf.process.file.signature.certificate.subject",
+	"ocsf.process.file.signature.certificate.version",
+	"ocsf.process.container.orchestrator",
+	"ocsf.process.cmd_line",
+	"ocsf.process.terminated_time",
+	"ocsf.process.uid",
+	"ocsf.process.egid",
+	"ocsf.process.group.uid",
+	"ocsf.process.group.name",
+	"ocsf.process.name",
+	"ocsf.process.pid",
+	"ocsf.process.created_time",
+	"ocsf.process.tid",
+	"ocsf.process.user.domain",
+	"ocsf.process.user.email_addr",
+	"ocsf.process.user.full_name",
+	"ocsf.process.euid",
+	"ocsf.process.user.uid",
+	"ocsf.process.user.name",
+	"ocsf.process.parent_process.cmd_line",
+	"ocsf.process.parent_process.terminated_time",
+	"ocsf.process.parent_process.uid",
+	"ocsf.process.parent_process.egid",
+	"ocsf.process.parent_process.group.uid",
+	"ocsf.process.parent_process.group.name",
+	"ocsf.process.parent_process.name",
+	"ocsf.process.parent_process.pid",
+	"ocsf.process.parent_process.created_time",
+	"ocsf.process.parent_process.tid",
+	"ocsf.process.parent_process.user.domain",
+	"ocsf.process.parent_process.user.email_addr",
+	"ocsf.process.parent_process.user.full_name",
+	"ocsf.process.parent_process.euid",
+	"ocsf.process.parent_process.user.uid",
+	"ocsf.process.parent_process.user.name",
+	"ocsf.actor.process.cmd_line",
+	"ocsf.actor.process.container.image.labels",
+	"ocsf.actor.process.container.image.name",
+	"ocsf.actor.process.container.image.tag",
+	"ocsf.actor.process.container.name",
+	"ocsf.actor.process.container.orchestrator",
+	"ocsf.actor.process.container.runtime",
+	"ocsf.actor.process.container.uid",
+	"ocsf.actor.process.created_time",
+	"ocsf.actor.process.egid",
+	"ocsf.actor.process.euid",
+	"ocsf.actor.process.file.accessed_time",
+	"ocsf.actor.process.file.created_time",
+	"ocsf.actor.process.file.mime_type",
+	"ocsf.actor.process.file.modified_time",
+	"ocsf.actor.process.file.name",
+	"ocsf.actor.process.file.owner.name",
+	"ocsf.actor.process.file.owner.uid",
+	"ocsf.actor.process.file.parent_folder",
+	"ocsf.actor.process.file.path",
+	"ocsf.actor.process.file.signature.certificate.expiration_time",
+	"ocsf.actor.process.file.signature.certificate.issuer",
+	"ocsf.actor.process.file.signature.certificate.serial_number",
+	"ocsf.actor.process.file.signature.certificate.subject",
+	"ocsf.actor.process.file.signature.certificate.version",
+	"ocsf.actor.process.file.size",
+	"ocsf.actor.process.file.type",
+	"ocsf.actor.process.file.uid",
+	"ocsf.actor.process.group.name",
+	"ocsf.actor.process.group.uid",
+	"ocsf.actor.process.name",
+	"ocsf.actor.process.pid",
+	"ocsf.actor.process.terminated_time",
+	"ocsf.actor.process.tid",
+	"ocsf.actor.process.uid",
+	"ocsf.actor.process.user.domain",
+	"ocsf.actor.process.user.email_addr",
+	"ocsf.actor.process.user.full_name",
+	"ocsf.actor.process.user.name",
+	"ocsf.actor.process.user.uid",
+	"ocsf.actor.process.parent_process.cmd_line",
+	"ocsf.actor.process.parent_process.created_time",
+	"ocsf.actor.process.parent_process.egid",
+	"ocsf.actor.process.parent_process.euid",
+	"ocsf.actor.process.parent_process.group.name",
+	"ocsf.actor.process.parent_process.group.uid",
+	"ocsf.actor.process.parent_process.name",
+	"ocsf.actor.process.parent_process.pid",
+	"ocsf.actor.process.parent_process.terminated_time",
+	"ocsf.actor.process.parent_process.tid",
+	"ocsf.actor.process.parent_process.uid",
+	"ocsf.actor.process.parent_process.user.domain",
+	"ocsf.actor.process.parent_process.user.email_addr",
+	"ocsf.actor.process.parent_process.user.full_name",
+	"ocsf.actor.process.parent_process.user.name",
+	"ocsf.actor.process.parent_process.user.uid",
+	"ocsf.actor.user.domain",
+	"ocsf.actor.user.email_addr",
+	"ocsf.actor.user.full_name",
+	"ocsf.actor.user.name",
+	"ocsf.actor.user.uid",
+	"ocsf.user.domain",
+	"ocsf.user.email_addr",
+	"ocsf.user.full_name",
+	"ocsf.user.name",
+	"ocsf.user.uid",
+	"ocsf.user_result.domain",
+	"ocsf.user_result.email_addr",
+	"ocsf.user_result.full_name",
+	"ocsf.user_result.name",
+	"ocsf.user_result.uid",
+	"ocsf.traffic.bytes",
+	"ocsf.traffic.bytes_in",
+	"ocsf.traffic.bytes_out",
+	"ocsf.traffic.packets",
+	"ocsf.traffic.packets_in",
+	"ocsf.traffic.packets_out",
+	"ocsf.tls.certificate.expiration_time",
+	"ocsf.tls.certificate.issuer",
+	"ocsf.tls.certificate.serial_number",
+	"ocsf.tls.certificate.subject",
+	"ocsf.tls.certificate.version",
+	"ocsf.tls.cipher",
+	"ocsf.tls.client_ciphers",
+	"ocsf.tls.ja3_hash.value",
+	"ocsf.tls.ja3s_hash.value",
+	"ocsf.tls.sni",
+	"ocsf.tls.version",
+	"ocsf.start_time",
+	"ocsf.src_endpoint.domain",
+	"ocsf.src_endpoint.hostname",
+	"ocsf.src_endpoint.ip",
+	"ocsf.src_endpoint.location.city",
+	"ocsf.src_endpoint.location.continent",
+	"ocsf.src_endpoint.location.coordinates",
+	"ocsf.src_endpoint.location.country",
+	"ocsf.src_endpoint.location.desc",
+	"ocsf.src_endpoint.location.postal_code",
+	"ocsf.src_endpoint.location.region",
+	"ocsf.src_endpoint.mac",
+	"ocsf.src_endpoint.port",
+	"ocsf.src_endpoint.svc_name",
+	"ocsf.dst_endpoint.domain",
+	"ocsf.dst_endpoint.hostname",
+	"ocsf.dst_endpoint.ip",
+	"ocsf.dst_endpoint.location.city",
+	"ocsf.dst_endpoint.location.continent",
+	"ocsf.dst_endpoint.location.coordinates",
+	"ocsf.dst_endpoint.location.country",
+	"ocsf.dst_endpoint.location.desc",
+	"ocsf.dst_endpoint.location.postal_code",
+	"ocsf.dst_endpoint.location.region",
+	"ocsf.dst_endpoint.mac",
+	"ocsf.dst_endpoint.port",
+	"ocsf.dst_endpoint.svc_name",
+	"ocsf.connection_info.protocol_name",
+	"ocsf.connection_info.protocol_num",
+	"ocsf.connection_info.protocol_ver",
+	"ocsf.device.domain",
+	"ocsf.device.hostname",
+	"ocsf.device.ip",
+	"ocsf.device.location.city",
+	"ocsf.device.location.continent",
+	"ocsf.device.location.coordinates",
+	"ocsf.device.location.country",
+	"ocsf.device.location.desc",
+	"ocsf.device.location.postal_code",
+	"ocsf.device.location.region",
+	"ocsf.device.mac",
+	"ocsf.device.name",
+	"ocsf.device.os.build",
+	"ocsf.device.os.name",
+	"ocsf.device.risk_level",
+	"ocsf.device.risk_score",
+	"ocsf.device.type",
+	"ocsf.device.uid",
+	"ocsf.device.vlan_uid",
+	"ocsf.http_request.http_method",
+	"ocsf.http_request.referrer",
+	"ocsf.http_request.uid",
+	"ocsf.http_request.url.hostname",
+	"ocsf.http_request.url.path",
+	"ocsf.http_request.url.port",
+	"ocsf.http_request.url.query_string",
+	"ocsf.http_request.url.scheme",
+	"ocsf.http_request.url.subdomain",
+	"ocsf.http_request.url.url_string",
+	"ocsf.http_request.user_agent",
+	"ocsf.http_request.version",
+	"ocsf.query.hostname",
+	"ocsf.query.packet_uid",
+	"ocsf.query.class",
+	"ocsf.query.type",
+	"ocsf.rcode",
+	"ocsf.service.name",
+	"ocsf.service.uid",
+	"ocsf.service.version",
+	"ocsf.group.name",
+	"ocsf.group.uid",
+	"ocsf.file.accessed_time",
+	"ocsf.file.created_time",
+	"ocsf.file.mime_type",
+	"ocsf.file.modified_time",
+	"ocsf.file.name",
+	"ocsf.file.owner.name",
+	"ocsf.file.owner.uid",
+	"ocsf.file.parent_folder",
+	"ocsf.file.path",
+	"ocsf.file.signature.certificate.expiration_time",
+	"ocsf.file.signature.certificate.issuer",
+	"ocsf.file.signature.certificate.serial_number",
+	"ocsf.file.signature.certificate.subject",
+	"ocsf.file.signature.certificate.version",
+	"ocsf.file.size",
+	"ocsf.file.type",
+	"ocsf.file.uid",
+	"ocsf.driver.file.accessed_time",
+	"ocsf.driver.file.created_time",
+	"ocsf.driver.file.mime_type",
+	"ocsf.driver.file.modified_time",
+	"ocsf.driver.file.name",
+	"ocsf.driver.file.owner.name",
+	"ocsf.driver.file.owner.uid",
+	"ocsf.driver.file.parent_folder",
+	"ocsf.driver.file.path",
+	"ocsf.driver.file.signature.certificate.expiration_time",
+	"ocsf.driver.file.signature.certificate.issuer",
+	"ocsf.driver.file.signature.certificate.serial_number",
+	"ocsf.driver.file.signature.certificate.subject",
+	"ocsf.driver.file.signature.certificate.version",
+	"ocsf.driver.file.size",
+	"ocsf.driver.file.type",
+	"ocsf.driver.file.uid",
+	"ocsf.module.file.accessed_time",
+	"ocsf.module.file.created_time",
+	"ocsf.module.file.mime_type",
+	"ocsf.module.file.modified_time",
+	"ocsf.module.file.name",
+	"ocsf.module.file.owner.name",
+	"ocsf.module.file.owner.uid",
+	"ocsf.module.file.parent_folder",
+	"ocsf.module.file.path",
+	"ocsf.module.file.signature.certificate.expiration_time",
+	"ocsf.module.file.signature.certificate.issuer",
+	"ocsf.module.file.signature.certificate.serial_number",
+	"ocsf.module.file.signature.certificate.subject",
+	"ocsf.module.file.signature.certificate.version",
+	"ocsf.module.file.size",
+	"ocsf.module.file.type",
+	"ocsf.module.file.uid",
+	"ocsf.job.file.accessed_time",
+	"ocsf.job.file.created_time",
+	"ocsf.job.file.mime_type",
+	"ocsf.job.file.modified_time",
+	"ocsf.job.file.name",
+	"ocsf.job.file.owner.name",
+	"ocsf.job.file.owner.uid",
+	"ocsf.job.file.parent_folder",
+	"ocsf.job.file.path",
+	"ocsf.job.file.signature.certificate.expiration_time",
+	"ocsf.job.file.signature.certificate.issuer",
+	"ocsf.job.file.signature.certificate.serial_number",
+	"ocsf.job.file.signature.certificate.subject",
+	"ocsf.job.file.signature.certificate.version",
+	"ocsf.job.file.size",
+	"ocsf.job.file.type",
+	"ocsf.job.file.uid",
+	"ocsf.job.user.domain",
+	"ocsf.job.user.email_addr",
+	"ocsf.job.user.full_name",
+	"ocsf.job.user.name",
+	"ocsf.job.user.uid",
+	"ocsf.exit_code",
+	"ocsf.cis_benchmark_result.rule.category",
+	"ocsf.cis_benchmark_result.rule.desc",
+	"ocsf.cis_benchmark_result.rule.name",
+	"ocsf.cis_benchmark_result.rule.uid",
+	"ocsf.cis_benchmark_result.rule.version",
+	"ocsf.http_response.code",
+	"ocsf.http_response.length",
+	"ocsf.http_response.message",
+	"ocsf.relay.hostname",
+	"ocsf.relay.ip",
+	"ocsf.relay.mac",
+	"ocsf.relay.name",
+	"ocsf.relay.type",
+	"ocsf.request.uid",
+	"ocsf.response.code",
+	"ocsf.certificate_chain",
+	"ocsf.email.cc",
+	"ocsf.email.uid",
+	"ocsf.email.from",
+	"ocsf.email.message_uid",
+	"ocsf.email.reply_to",
+	"ocsf.email.subject",
+	"ocsf.email.to",
+	"ocsf.email_uid",
+	"ocsf.url.query_string",
+	"ocsf.url.hostname",
+	"ocsf.url.path",
+	"ocsf.url.port",
+	"ocsf.url.scheme",
+	"ocsf.url.subdomain",
+	"ocsf.url.url_string",
+}
+-- want.txt --
+---
+description: Pipeline for processing Amazon Security Lake Events.
+processors:
+  # Base Event docs: https://schema.ocsf.io/1.1.0/base_event?extensions=
+
+  - set:
+      tag: set_ecs_version
+      field: ecs.version
+      value: 8.11.0
+  - rename:
+      tag: rename_message_to_event_original
+      if: ctx.event?.original == null
+      field: message
+      target_field: event.original
+      ignore_missing: true
+  - json:
+      tag: json_event_original_into_ocsf
+      field: event.original
+      target_field: ocsf
+      on_failure:
+        - append:
+            tag: append_error_message_01
+            field: error.message
+            value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
+  - script:
+      description: Recursively traverses the ocsf object to convert suspected timestamps to milliseconds.
+      tag: convert_timestamps_to_milliseconds
+      source: |-
+        def convertToMilliseconds(long timestamp) {
+            if ((long)1e19 - 1 < timestamp) {
+                throw new IllegalArgumentException("Timestamp format not recognized: " + timestamp);
+            } else if ((long)1e16 - 1 < timestamp) {
+                return timestamp / 1000000;  // Convert nanoseconds to milliseconds
+            } else if ((long)1e13 - 1 < timestamp) {
+                return timestamp / 1000;  // Convert microseconds to milliseconds
+            } else if ((long)1e10 - 1 < timestamp) {
+                return timestamp;  // Already in milliseconds, no conversion needed
+            } else {
+                return timestamp * 1000;  // Convert seconds to milliseconds
+            }
+        }
+
+        def processFields(Map fields) {
+            for (entry in fields.entrySet()) {
+                def fieldName = entry.getKey();
+                def fieldValue = entry.getValue();
+                // Check if the field is a nested object (Map)
+                if (fieldValue instanceof Map) {
+                    // Recursively process nested objects
+                    processFields((Map) fieldValue);
+                } else if (fieldName.endsWith('time') || fieldName.endsWith('_time')) {
+                    // If the field name ends with "time" or "_time" and is a number, convert it
+                    if (fieldValue instanceof Number) {
+                        fields[fieldName] = convertToMilliseconds(((Number) fieldValue).longValue());
+                    }
+                }
+            }
+            return null;
+        }
+        processFields(ctx.ocsf);
+      on_failure:
+        - append:
+            tag: append_error_message_02
+            field: error.message
+            value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
+  - rename:
+      tag: rename_resource_to_resources
+      if: ctx.ocsf?.resources == null
+      field: resource
+      target_field: resources
+      ignore_missing: true
+  - rename:
+      tag: rename_finding_info_list_to_finding_info
+      if: ctx.ocsf?.finding_info == null
+      field: finding_info_list
+      target_field: finding_info
+      ignore_missing: true
+  - convert:
+      tag: convert_ocsf_class_uid_to_string
+      field: ocsf.class_uid
+      type: string
+      ignore_missing: true
+
+  # Set event.kind based on ocsf.class_uid.
+  - set:
+      tag: set_event_kind_1
+      if: ctx.ocsf?.class_uid != null && ['1001','1002','1003','1004','1005','1006','1007','3001','3002','3003','3005','3006','4001','4002','4003','4004','4005','4006','4007','4008','4009','4010','4011','4012','4013','5001','5002','5003','5004','5019','6001','6002','6003','6004','6005','6006','6007'].contains(ctx.ocsf.class_uid)
+      field: event.kind
+      value: event
+  - set:
+      tag: set_event_kind_2
+      if: ctx.ocsf?.class_uid != null && ['2001','2002','2003','2004','2005'].contains(ctx.ocsf.class_uid)
+      field: event.kind
+      value: alert
+
+  # Set event.category based on ocsf.class_uid.
+  - append:
+      tag: append_malware_into_event_category
+      if: ctx.ocsf?.class_uid != null && ['2001'].contains(ctx.ocsf.class_uid)malware%!(EXTRA string= && ctx.ocsf.malware != null)
+      field: event.category
+      value: malware
+      allow_duplicates: false
+  - append:
+      tag: append_vulnerability_into_event_category
+      if: ctx.ocsf?.class_uid != null && ['2001','2002','2003','2004','2005'].contains(ctx.ocsf.class_uid)vulnerability%!(EXTRA string= && ctx.ocsf.vulnerabilities != null)
+      field: event.category
+      value: vulnerability
+      allow_duplicates: false
+  - append:
+      tag: append_iam_into_event_category
+      if: ctx.ocsf?.class_uid != null && ['3001','3005','3006'].contains(ctx.ocsf.class_uid)iam%!(EXTRA string=)
+      field: event.category
+      value: iam
+      allow_duplicates: false
+  - append:
+      tag: append_authentication_into_event_category
+      if: ctx.ocsf?.class_uid != null && ['3002'].contains(ctx.ocsf.class_uid)authentication%!(EXTRA string=)
+      field: event.category
+      value: authentication
+      allow_duplicates: false
+  - append:
+      tag: append_session_into_event_category
+      if: ctx.ocsf?.class_uid != null && ['3003'].contains(ctx.ocsf.class_uid)session%!(EXTRA string=)
+      field: event.category
+      value: session
+      allow_duplicates: false
+  - append:
+      tag: append_network_into_event_category
+      if: ctx.ocsf?.class_uid != null && ['4001','4003','4004','4005','4007','4008','4010','4013'].contains(ctx.ocsf.class_uid)network%!(EXTRA string=)
+      field: event.category
+      value: network
+      allow_duplicates: false
+  - append:
+      tag: append_api_into_event_category
+      if: ctx.ocsf?.class_uid != null && ['4002','4006'].contains(ctx.ocsf.class_uid)api%!(EXTRA string=)
+      field: event.category
+      value: api
+      allow_duplicates: false
+  - append:
+      tag: append_file_into_event_category
+      if: ctx.ocsf?.class_uid != null && ['1001','4006','4008','4010','4011','6006'].contains(ctx.ocsf.class_uid)file%!(EXTRA string=)
+      field: event.category
+      value: file
+      allow_duplicates: false
+  - append:
+      tag: append_email_into_event_category
+      if: ctx.ocsf?.class_uid != null && ['4009','4011','4012'].contains(ctx.ocsf.class_uid)email%!(EXTRA string=)
+      field: event.category
+      value: email
+      allow_duplicates: false
+  - append:
+      tag: append_web_into_event_category
+      if: ctx.ocsf?.class_uid != null && ['6003','6004'].contains(ctx.ocsf.class_uid)web%!(EXTRA string=)
+      field: event.category
+      value: web
+      allow_duplicates: false
+  - append:
+      tag: append_package_into_event_category
+      if: ctx.ocsf?.class_uid != null && ['6002'].contains(ctx.ocsf.class_uid)package%!(EXTRA string=)
+      field: event.category
+      value: package
+      allow_duplicates: false
+  - append:
+      tag: append_configuration_into_event_category
+      if: ctx.ocsf?.class_uid != null && ['5002'].contains(ctx.ocsf.class_uid)configuration%!(EXTRA string=)
+      field: event.category
+      value: configuration
+      allow_duplicates: false
+  - append:
+      tag: append_driver_into_event_category
+      if: ctx.ocsf?.class_uid != null && ['1002','1003'].contains(ctx.ocsf.class_uid)driver%!(EXTRA string=)
+      field: event.category
+      value: driver
+      allow_duplicates: false
+  - append:
+      tag: append_process_into_event_category
+      if: ctx.ocsf?.class_uid != null && ['1007'].contains(ctx.ocsf.class_uid)process%!(EXTRA string=)
+      field: event.category
+      value: process
+      allow_duplicates: false
+  - append:
+      tag: append_info_into_event_category
+      if: ctx.ocsf?.class_uid != null && ['1001','1002','1003','1007','2001','2002','2003','2004','2005','3001','3002','3003','3005','3006','4001','4002','4003','4004','4005','4006','4007','4008','4009','4010','4011','4012','4013','5001','5002','5003','5004','5019','6002','6003','6004','6005','6006','6007'].contains(ctx.ocsf.class_uid)info%!(EXTRA string=)
+      field: event.category
+      value: info
+      allow_duplicates: false
+  - append:
+      tag: append_user_into_event_category
+      if: ctx.ocsf?.class_uid != null && ['3001','3006'].contains(ctx.ocsf.class_uid)user%!(EXTRA string=)
+      field: event.category
+      value: user
+      allow_duplicates: false
+  - append:
+      tag: append_group_into_event_category
+      if: ctx.ocsf?.class_uid != null && ['3005'].contains(ctx.ocsf.class_uid)group%!(EXTRA string=)
+      field: event.category
+      value: group
+      allow_duplicates: false
+  - append:
+      tag: append_protocol_into_event_category
+      if: ctx.ocsf?.class_uid != null && ['4003','4004','4005','4007','4008'].contains(ctx.ocsf.class_uid)protocol%!(EXTRA string=)
+      field: event.category
+      value: protocol
+      allow_duplicates: false
+  - append:
+      tag: append_creation_into_event_category
+      if: ctx.ocsf?.class_uid != null && ['1001','2005','3001','4006','5002'].contains(ctx.ocsf.class_uid)creation%!(EXTRA string= && ['Create','File Create','Log'].contains(ctx.ocsf.activity_name))
+      field: event.category
+      value: creation
+      allow_duplicates: false
+  - append:
+      tag: append_access_into_event_category
+      if: ctx.ocsf?.class_uid != null && ['1001','4006','4010','5002','6004'].contains(ctx.ocsf.class_uid)access%!(EXTRA string= && ['Read','File Open','Preview','Open','Access Grant','Access Deny','Access Revoke','Access Error','Log'].contains(ctx.ocsf.activity_name))
+      field: event.category
+      value: access
+      allow_duplicates: false
+  - append:
+      tag: append_deletion_into_event_category
+      if: ctx.ocsf?.class_uid != null && ['1001','3001','4010','6002'].contains(ctx.ocsf.class_uid)deletion%!(EXTRA string= && ['Delete','Remove'].contains(ctx.ocsf.activity_name))
+      field: event.category
+      value: deletion
+      allow_duplicates: false
+  - append:
+      tag: append_start_into_event_category
+      if: ctx.ocsf?.class_uid != null && ['1007','3002','4001','4013','4007','6002','6007'].contains(ctx.ocsf.class_uid)start%!(EXTRA string= && ['Launch','Logon','Open','Start','Started','Symmetric Active Exchange','Client Synchronization','Broadcast','Control'].contains(ctx.ocsf.activity_name))
+      field: event.category
+      value: start
+      allow_duplicates: false
+  - append:
+      tag: append_end_into_event_category
+      if: ctx.ocsf?.class_uid != null && ['1007','2005','3002','4001','4007','4013','6002','6007'].contains(ctx.ocsf.class_uid)end%!(EXTRA string= && ['Terminate','Logoff','Close','Completed','Stop','Symmetric Passive Response','Server Response','Private Use Case','Other'].contains(ctx.ocsf.activity_name))
+      field: event.category
+      value: end
+      allow_duplicates: false
+  - append:
+      tag: append_denied_into_event_category
+      if: ctx.ocsf?.class_uid != null && ['4001','4003','4004','4007'].contains(ctx.ocsf.class_uid)denied%!(EXTRA string= && ['Refuse','Decline'].contains(ctx.ocsf.activity_name))
+      field: event.category
+      value: denied
+      allow_duplicates: false
+  - append:
+      tag: append_allowed_into_event_category
+      if: ctx.ocsf?.class_uid != null && ['4004'].contains(ctx.ocsf.class_uid)allowed%!(EXTRA string= && ['Ack'].contains(ctx.ocsf.activity_name))
+      field: event.category
+      value: allowed
+      allow_duplicates: false
+  - append:
+      tag: append_change_into_event_category
+      if: ctx.ocsf?.class_uid != null && ['1001','2005','4006','4010'].contains(ctx.ocsf.class_uid)change%!(EXTRA string= && ['Update','File Supersede','File Overwrite','Update','Rename'].contains(ctx.ocsf.activity_name))
+      field: event.category
+      value: change
+      allow_duplicates: false
+  - append:
+      tag: append_connection_into_event_category
+      if: ctx.ocsf?.class_uid != null && ['4005'].contains(ctx.ocsf.class_uid)connection%!(EXTRA string= && ['Connect Request','Connect Response'].contains(ctx.ocsf.activity_name))
+      field: event.category
+      value: connection
+      allow_duplicates: false
+  - append:
+      tag: append_installation_into_event_category
+      if: ctx.ocsf?.class_uid != null && ['6002','5004'].contains(ctx.ocsf.class_uid)installation%!(EXTRA string= && ['Install','Log','Collect'].contains(ctx.ocsf.activity_name))
+      field: event.category
+      value: installation
+      allow_duplicates: false
+  - append:
+      tag: append_error_into_event_category
+      if: ctx.ocsf?.class_uid != null && ['6004','6007'].contains(ctx.ocsf.class_uid)error%!(EXTRA string= && ['Access Error','Error'].contains(ctx.ocsf.activity_name))
+      field: event.category
+      value: error
+      allow_duplicates: false
+
+  # Set cloud details.
+  - set:
+      tag: set_cloud_account_id_1
+      field: cloud.account.id
+      copy_from: ocsf.cloud.account.uid
+      ignore_empty_value: true
+  - set:
+      tag: set_cloud_account_id_2
+      field: cloud.account.id
+      copy_from: ocsf.cloud.account.uid
+      ignore_empty_value: true
+  - set:
+      tag: set_cloud_account_name
+      field: cloud.account.name
+      copy_from: ocsf.cloud.account.name
+      ignore_empty_value: true
+  - set:
+      tag: set_cloud_availability_zone
+      field: cloud.availability_zone
+      copy_from: ocsf.cloud.zone
+      ignore_empty_value: true
+  - set:
+      tag: set_cloud_project_id
+      field: cloud.project.id
+      copy_from: ocsf.cloud.project_uid
+      ignore_empty_value: true
+  - set:
+      tag: set_cloud_provider
+      field: cloud.provider
+      copy_from: ocsf.cloud.provider
+      ignore_empty_value: true
+  - set:
+      tag: set_cloud_region
+      field: cloud.region
+      copy_from: ocsf.cloud.region
+      ignore_empty_value: true
+  - lowercase:
+      tag: lowercase_ocsf_activity_name_into_event_action
+      field: ocsf.activity_name
+      target_field: event.action
+      ignore_missing: true
+      on_failure:
+        - remove:
+            tag: remove_01
+            field:
+              - ocsf.activity_name
+            ignore_missing: true
+        - append:
+            tag: append_error_message_03
+            field: error.message
+            value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
+  - gsub:
+      tag: gsub_event_action
+      field: event.action
+      pattern: '[: ]'
+      replacement: '-'
+      ignore_missing: true
+      on_failure:
+        - remove:
+            tag: remove_02
+            field:
+              - event.action
+            ignore_missing: true
+        - append:
+            tag: append_error_message_04
+            field: error.message
+            value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
+  - set:
+      tag: set_event_code
+      field: event.code
+      copy_from: ocsf.metadata.event_code
+      ignore_empty_value: true
+  - convert:
+      tag: convert_ocsf_duration_to_long
+      field: ocsf.duration
+      type: long
+      ignore_missing: true
+      on_failure:
+        - remove:
+            tag: remove_03
+            field:
+              - ocsf.duration
+            ignore_missing: true
+        - append:
+            tag: append_error_message_05
+            field: error.message
+            value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
+  - script:
+      description: Convert duration from milliseconds to nanoseconds.
+      tag: script_duration_ms_to_ns
+      if: ctx.ocsf?.duration != null
+      source: ctx.event.duration = ctx.ocsf.duration * 1000000;
+  - set:
+      tag: set_event_id
+      field: event.id
+      copy_from: ocsf.metadata.uid
+      ignore_empty_value: true
+  - set:
+      tag: set_event_provider_1
+      field: event.provider
+      copy_from: ocsf.metadata.log_provider
+      ignore_empty_value: true
+  - set:
+      tag: set_event_provider_2
+      if: ctx.ocsf?.metadata?.log_provider == null
+      field: event.provider
+      copy_from: ocsf.metadata.product.vendor_name
+      ignore_empty_value: true
+  - convert:
+      tag: convert_ocsf_metadata_sequence_to_long
+      field: ocsf.metadata.sequence
+      type: long
+      ignore_missing: true
+      on_failure:
+        - remove:
+            tag: remove_04
+            field:
+              - ocsf.metadata.sequence
+            ignore_missing: true
+        - append:
+            tag: append_error_message_06
+            field: error.message
+            value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
+  - set:
+      tag: set_event_sequence
+      field: event.sequence
+      copy_from: ocsf.metadata.sequence
+      ignore_empty_value: true
+  - set:
+      tag: set_message
+      field: message
+      copy_from: ocsf.message
+      ignore_empty_value: true
+  - foreach:
+      tag: foreach_of_ocsf_metadata_labels
+      if: ctx.ocsf?.metadata?.labels instanceof List
+      field: ocsf.metadata.labels
+      processor:
+        append:
+          tag: append_tags_2
+          field: tags
+          value: '{{{_ingest._value}}}'
+          allow_duplicates: false
+  - convert:
+      tag: convert_ocsf_activity_id_to_string
+      field: ocsf.activity_id
+      type: string
+      ignore_missing: true
+  - convert:
+      tag: convert_ocsf_category_uid_to_string
+      field: ocsf.category_uid
+      type: string
+      ignore_missing: true
+  - convert:
+      tag: convert_ocsf_cloud_account_type_id_to_string
+      field: ocsf.cloud.account.type_id
+      type: string
+      ignore_missing: true
+  - convert:
+      tag: convert_ocsf_resource_owner_type_id_to_string
+      field: ocsf.resource.owner.type_id
+      type: string
+      ignore_missing: true
+  - convert:
+      tag: convert_ocsf_api_response_code_to_long
+      field: ocsf.api.response.code
+      type: long
+      ignore_missing: true
+      on_failure:
+        - remove:
+            tag: remove_05
+            field:
+              - ocsf.api.response.code
+            ignore_missing: true
+        - append:
+            tag: append_error_message_07
+            field: error.message
+            value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
+  - convert:
+      tag: convert_ocsf_count_to_long
+      field: ocsf.count
+      type: long
+      ignore_missing: true
+      on_failure:
+        - remove:
+            tag: remove_06
+            field:
+              - ocsf.count
+            ignore_missing: true
+        - append:
+            tag: append_error_message_08
+            field: error.message
+            value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
+  - date:
+      tag: date_ocsf_end_time_dt_into_ocsf_end_time_dt
+      if: ctx.ocsf?.end_time_dt != null && ctx.ocsf.end_time_dt != ''
+      field: ocsf.end_time_dt    target_field: ocsf.end_time_dt
+      formats:
+        - ISO8601
+      on_failure:
+        - remove:
+            tag: remove_07
+            field:
+              - ocsf.end_time_dt
+            ignore_missing: true
+        - append:
+            tag: append_error_message_09
+            field: error.message
+            value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
+  - set:
+      tag: set_event_end_1
+      field: event.end
+      copy_from: ocsf.end_time_dt
+      ignore_empty_value: true
+  - date:
+      tag: date_ocsf_end_time_into_ocsf_end_time
+      if: ctx.ocsf?.end_time != null && ctx.ocsf.end_time != ''
+      field: ocsf.end_time    target_field: ocsf.end_time
+      formats:
+        - UNIX_MS
+      on_failure:
+        - remove:
+            tag: remove_08
+            field:
+              - ocsf.end_time
+            ignore_missing: true
+        - append:
+            tag: append_error_message_10
+            field: error.message
+            value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
+  - set:
+      tag: set_event_end_2
+      field: event.end
+      copy_from: ocsf.end_time
+      ignore_empty_value: true
+  - date:
+      tag: date_ocsf_time_dt
+      if: ctx.ocsf?.time_dt != null && ctx.ocsf.time_dt != ''
+      field: ocsf.time_dt
+      formats:
+        - ISO8601
+      on_failure:
+        - remove:
+            tag: remove_09
+            field:
+              - ocsf.time_dt
+            ignore_missing: true
+        - append:
+            tag: append_error_message_11
+            field: error.message
+            value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
+  - date:
+      tag: date_ocsf_time
+      if: ctx.ocsf?.time != null && ctx.ocsf.time != ''
+      field: ocsf.time
+      formats:
+        - UNIX_MS
+      on_failure:
+        - remove:
+            tag: remove_10
+            field:
+              - ocsf.time_dt
+            ignore_missing: true
+        - append:
+            tag: append_error_message_12
+            field: error.message
+            value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
+  - date:
+      tag: date_ocsf_time_dt_into_ocsf_time_dt
+      if: ctx.ocsf?.time_dt != null && ctx.ocsf.time_dt != ''
+      field: ocsf.time_dt    target_field: ocsf.time_dt
+      formats:
+        - ISO8601
+      on_failure:
+        - remove:
+            tag: remove_11
+            field:
+              - ocsf.time_dt
+            ignore_missing: true
+        - append:
+            tag: append_error_message_13
+            field: error.message
+            value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
+  - date:
+      tag: date_ocsf_time_into_ocsf_time
+      if: ctx.ocsf?.time != null && ctx.ocsf.time != ''
+      field: ocsf.time    target_field: ocsf.time
+      formats:
+        - UNIX_MS
+      on_failure:
+        - remove:
+            tag: remove_12
+            field:
+              - ocsf.time_dt
+            ignore_missing: true
+        - append:
+            tag: append_error_message_14
+            field: error.message
+            value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
+  - date:
+      tag: date_ocsf_metadata_logged_time_dt_into_ocsf_metadata_logged_time_dt
+      if: ctx.ocsf?.metadata?.logged_time_dt != null && ctx.ocsf.metadata.logged_time_dt != ''
+      field: ocsf.metadata.logged_time_dt    target_field: ocsf.metadata.logged_time_dt
+      formats:
+        - ISO8601
+      on_failure:
+        - remove:
+            tag: remove_13
+            field:
+              - ocsf.time_dt
+            ignore_missing: true
+        - append:
+            tag: append_error_message_15
+            field: error.message
+            value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
+  - date:
+      tag: date_ocsf_metadata_logged_time_into_ocsf_metadata_logged_time
+      if: ctx.ocsf?.metadata?.logged_time != null && ctx.ocsf.metadata.logged_time != ''
+      field: ocsf.metadata.logged_time    target_field: ocsf.metadata.logged_time
+      formats:
+        - UNIX_MS
+      on_failure:
+        - remove:
+            tag: remove_14
+            field:
+              - ocsf.time_dt
+            ignore_missing: true
+        - append:
+            tag: append_error_message_16
+            field: error.message
+            value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
+  - date:
+      tag: date_ocsf_metadata_modified_time_dt_into_ocsf_metadata_modified_time_dt
+      if: ctx.ocsf?.metadata?.modified_time_dt != null && ctx.ocsf.metadata.modified_time_dt != ''
+      field: ocsf.metadata.modified_time_dt    target_field: ocsf.metadata.modified_time_dt
+      formats:
+        - ISO8601
+      on_failure:
+        - remove:
+            tag: remove_15
+            field:
+              - ocsf.time_dt
+            ignore_missing: true
+        - append:
+            tag: append_error_message_17
+            field: error.message
+            value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
+  - date:
+      tag: date_ocsf_metadata_modified_time_into_ocsf_metadata_modified_time
+      if: ctx.ocsf?.metadata?.modified_time != null && ctx.ocsf.metadata.modified_time != ''
+      field: ocsf.metadata.modified_time    target_field: ocsf.metadata.modified_time
+      formats:
+        - UNIX_MS
+      on_failure:
+        - remove:
+            tag: remove_16
+            field:
+              - ocsf.time_dt
+            ignore_missing: true
+        - append:
+            tag: append_error_message_18
+            field: error.message
+            value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
+  - date:
+      tag: date_ocsf_metadata_processed_time_dt_into_ocsf_metadata_processed_time_dt
+      if: ctx.ocsf?.metadata?.processed_time_dt != null && ctx.ocsf.metadata.processed_time_dt != ''
+      field: ocsf.metadata.processed_time_dt    target_field: ocsf.metadata.processed_time_dt
+      formats:
+        - ISO8601
+      on_failure:
+        - remove:
+            tag: remove_17
+            field:
+              - ocsf.time_dt
+            ignore_missing: true
+        - append:
+            tag: append_error_message_19
+            field: error.message
+            value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
+  - date:
+      tag: date_ocsf_metadata_processed_time_into_ocsf_metadata_processed_time
+      if: ctx.ocsf?.metadata?.processed_time != null && ctx.ocsf.metadata.processed_time != ''
+      field: ocsf.metadata.processed_time    target_field: ocsf.metadata.processed_time
+      formats:
+        - UNIX_MS
+      on_failure:
+        - remove:
+            tag: remove_18
+            field:
+              - ocsf.time_dt
+            ignore_missing: true
+        - append:
+            tag: append_error_message_20
+            field: error.message
+            value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
+  - foreach:
+      tag: foreach_of_ocsf_observables_1
+      if: ctx.ocsf?.observables instanceof List
+      field: ocsf.observables
+      processor:
+        convert:
+          tag: convert__ingest__value_reputation_base_score_to_double
+          field: _ingest._value.reputation.base_score
+          type: double
+          ignore_missing: true
+          on_failure:
+            - remove:
+                tag: remove_19
+                field:
+                  - _ingest._value.reputation.base_score
+                ignore_missing: true
+            - append:
+                tag: append_error_message_21
+                field: error.message
+                value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
+      ignore_failure: true
+  - foreach:
+      tag: foreach_of_ocsf_observables_2
+      if: ctx.ocsf?.observables instanceof List
+      field: ocsf.observables
+      processor:
+        convert:
+          tag: convert__ingest__value_reputation_score_id_to_string
+          field: _ingest._value.reputation.score_id
+          type: string
+          ignore_missing: true
+      ignore_failure: true
+  - foreach:
+      tag: foreach_of_ocsf_observables_3
+      if: ctx.ocsf?.observables instanceof List
+      field: ocsf.observables
+      processor:
+        convert:
+          tag: convert__ingest__value_type_id_to_string
+          field: _ingest._value.type_id
+          type: string
+          ignore_missing: true
+      ignore_failure: true
+  - convert:
+      tag: convert_ocsf_severity_id_to_long
+      field: ocsf.severity_id
+      type: long
+      ignore_missing: true
+      on_failure:
+        - remove:
+            tag: remove_20
+            field:
+              - ocsf.severity_id
+            ignore_missing: true
+        - append:
+            tag: append_error_message_22
+            field: error.message
+            value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
+  - set:
+      tag: set_event_severity
+      field: event.severity
+      copy_from: ocsf.severity_id
+      ignore_empty_value: true
+  - date:
+      tag: date_ocsf_start_time_dt_into_ocsf_start_time_dt
+      if: ctx.ocsf?.start_time_dt != null && ctx.ocsf.start_time_dt != ''
+      field: ocsf.start_time_dt    target_field: ocsf.start_time_dt
+      formats:
+        - ISO8601
+      on_failure:
+        - remove:
+            tag: remove_21
+            field:
+              - ocsf.start_time_dt
+            ignore_missing: true
+        - append:
+            tag: append_error_message_23
+            field: error.message
+            value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
+  - set:
+      tag: set_event_start_1
+      field: event.start
+      copy_from: ocsf.start_time_dt
+      ignore_empty_value: true
+  - date:
+      tag: date_ocsf_start_time_into_ocsf_start_time
+      if: ctx.ocsf?.start_time != null && ctx.ocsf.start_time != ''
+      field: ocsf.start_time    target_field: ocsf.start_time
+      formats:
+        - UNIX_MS
+      on_failure:
+        - remove:
+            tag: remove_22
+            field:
+              - ocsf.start_time
+            ignore_missing: true
+        - append:
+            tag: append_error_message_24
+            field: error.message
+            value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
+  - set:
+      tag: set_event_start_2
+      field: event.start
+      copy_from: ocsf.start_time
+      ignore_empty_value: true
+  - convert:
+      tag: convert_ocsf_status_id_to_string
+      field: ocsf.status_id
+      type: string
+      ignore_missing: true
+  - set:
+      tag: set_event_outcome_1
+      if: ctx.ocsf?.status_id == '0'
+      field: event.outcome
+      value: unknown
+  - set:
+      tag: set_event_outcome_2
+      if: ctx.ocsf?.status_id == '1'
+      field: event.outcome
+      value: success
+  - set:
+      tag: set_event_outcome_3
+      if: ctx.ocsf?.status_id == '2'
+      field: event.outcome
+      value: failure
+  - convert:
+      tag: convert_ocsf_timezone_offset_to_long
+      field: ocsf.timezone_offset
+      type: long
+      ignore_missing: true
+      on_failure:
+        - remove:
+            tag: remove_23
+            field:
+              - ocsf.timezone_offset
+            ignore_missing: true
+        - append:
+            tag: append_error_message_25
+            field: error.message
+            value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
+  - convert:
+      tag: convert_ocsf_type_uid_to_string
+      field: ocsf.type_uid
+      type: string
+      ignore_missing: true
+  - json:
+      tag: json_ocsf_raw_data
+      if: ctx.ocsf?.raw_data instanceof String
+      field: ocsf.raw_data
+      on_failure:
+        - rename:
+            tag: rename_ocsf_raw_data_to_ocsf_raw_data_keyword
+            field: ocsf.raw_data
+            target_field: ocsf.raw_data_keyword
+  - pipeline:
+      tag: pipeline_pipeline_object_actor
+      if: ctx.ocsf?.class_uid != null && ['1001','1002','1003','1004','1005','1006','1007','2002','2003','3001','3002','3003','3004','3005','4001','4002','4003','4004','4005','4006','4007','4008','4009','4010','4011','4012','4013','5001','5002','5003','5019','6001','6002','6003','6004','6005','6006','6007'].contains(ctx.ocsf.class_uid) && ctx.ocsf.actor != null
+      name: '{{ IngestPipeline "pipeline_object_actor" }}'
+      ignore_missing_pipeline: true
+  - pipeline:
+      tag: pipeline_pipeline_object_attack
+      if: ctx.ocsf?.class_uid != null && ['1001','1002','1003','1004','1005','1006','1007','2001','4001','4002','4003','4005','4006','4007','4008','4009','4011','4012','4013'].contains(ctx.ocsf.class_uid) && ctx.ocsf.attacks != null
+      name: '{{ IngestPipeline "pipeline_object_attack" }}'
+      ignore_missing_pipeline: true
+  - pipeline:
+      tag: pipeline_pipeline_object_network_connection_info
+      if: ctx.ocsf?.class_uid != null && ['4001','4002','4003','4005','4006','4007','4008','4013','6006'].contains(ctx.ocsf.class_uid) && ctx.ocsf.connection_info != null
+      name: '{{ IngestPipeline "pipeline_object_network_connection_info" }}'
+      ignore_missing_pipeline: true
+  - pipeline:
+      tag: pipeline_pipeline_object_device
+      if: ctx.ocsf?.class_uid != null && ['1001','1002','1003','1004','1005','1006','1007','2002','2003','3001','3002','3003','3004','3005','4001','4002','4003','4004','4005','4006','4007','4008','4009','4011','4012','4013','5001','5002','5004','5019','6001','6002','6004','6007'].contains(ctx.ocsf.class_uid) && ctx.ocsf.device != null
+      name: '{{ IngestPipeline "pipeline_object_device" }}'
+      ignore_missing_pipeline: true
+  - pipeline:
+      tag: pipeline_pipeline_object_http_request
+      if: ctx.ocsf?.class_uid != null && ['3001','3002','4002','6003','6004','6005'].contains(ctx.ocsf.class_uid) && ctx.ocsf.http_request != null
+      name: '{{ IngestPipeline "pipeline_object_http_request" }}'
+      ignore_missing_pipeline: true
+  - pipeline:
+      tag: pipeline_pipeline_object_malware
+      if: ctx.ocsf?.class_uid != null && ['2001','4001','4002','4003','4005','4006','4007','4008','4009','4011','4012','4013'].contains(ctx.ocsf.class_uid) && ctx.ocsf.malware != null
+      name: '{{ IngestPipeline "pipeline_object_malware" }}'
+      ignore_missing_pipeline: true
+  - pipeline:
+      tag: pipeline_pipeline_object_network_endpoint
+      if: ctx.ocsf?.class_uid != null && ['3001','3002','3003','3005','4001','4002','4003','4004','4005','4006','4007','4008','4009','4010','4013','6001','6003','6004','6005','6006'].contains(ctx.ocsf.class_uid) && (ctx.ocsf.dst_endpoint != null || ctx.ocsf.src_endpoint != null)
+      name: '{{ IngestPipeline "pipeline_object_network_endpoint" }}'
+      ignore_missing_pipeline: true
+  - pipeline:
+      tag: pipeline_pipeline_object_process
+      if: ctx.ocsf?.class_uid != null && ['1004','1007','2001'].contains(ctx.ocsf.class_uid) && ctx.ocsf.process != null
+      name: '{{ IngestPipeline "pipeline_object_process" }}'
+      ignore_missing_pipeline: true
+  - pipeline:
+      tag: pipeline_pipeline_object_proxy
+      if: ctx.ocsf?.class_uid != null && ['4001','4002','4003','4005','4006','4007','4008','4013'].contains(ctx.ocsf.class_uid) && ctx.ocsf.proxy != null
+      name: '{{ IngestPipeline "pipeline_object_proxy" }}'
+      ignore_missing_pipeline: true
+  - pipeline:
+      tag: pipeline_pipeline_object_tls
+      if: ctx.ocsf?.class_uid != null && ['4001','4002','4003','4005','4006','4007','4008','4013'].contains(ctx.ocsf.class_uid) && ctx.ocsf.tls != null
+      name: '{{ IngestPipeline "pipeline_object_tls" }}'
+      ignore_missing_pipeline: true
+  - pipeline:
+      tag: pipeline_pipeline_object_traffic
+      if: ctx.ocsf?.class_uid != null && ['4001','4002','4003','4005','4006','4007','4008','4013'].contains(ctx.ocsf.class_uid) && ctx.ocsf.traffic != null
+      name: '{{ IngestPipeline "pipeline_object_traffic" }}'
+      ignore_missing_pipeline: true
+  - pipeline:
+      tag: pipeline_pipeline_object_user
+      if: ctx.ocsf?.class_uid != null && ['2005','3001','3002','3003','3005','3006','5003'].contains(ctx.ocsf.class_uid) && ctx.ocsf.user != null
+      name: '{{ IngestPipeline "pipeline_object_user" }}'
+      ignore_missing_pipeline: true
+  - pipeline:
+      tag: pipeline_pipeline_object_file
+      if: ctx.ocsf?.class_uid != null && ['1001','4006','4010','4011','6006'].contains(ctx.ocsf.class_uid)
+      name: '{{ IngestPipeline "pipeline_object_file" }}'
+      ignore_missing_pipeline: true
+  - pipeline:
+      tag: pipeline_pipeline_object_system_activity_helper
+      if: ctx.ocsf?.class_uid != null && ['1002','1005','1006'].contains(ctx.ocsf.class_uid)
+      name: '{{ IngestPipeline "pipeline_object_system_activity_helper" }}'
+      ignore_missing_pipeline: true
+  - pipeline:
+      tag: pipeline_pipeline_category_system_activity
+      if: ctx.ocsf?.category_uid != null && ctx.ocsf.category_uid == '1'
+      name: '{{ IngestPipeline "pipeline_category_system_activity" }}'
+      ignore_missing_pipeline: true
+  - pipeline:
+      tag: pipeline_pipeline_category_findings
+      if: ctx.ocsf?.category_uid != null && ctx.ocsf.category_uid == '2'
+      name: '{{ IngestPipeline "pipeline_category_findings" }}'
+      ignore_missing_pipeline: true
+  - pipeline:
+      tag: pipeline_pipeline_category_identity_and_access_management
+      if: ctx.ocsf?.category_uid != null && ctx.ocsf.category_uid == '3'
+      name: '{{ IngestPipeline "pipeline_category_identity_and_access_management" }}'
+      ignore_missing_pipeline: true
+  - pipeline:
+      tag: pipeline_pipeline_category_network_activity
+      if: ctx.ocsf?.category_uid != null && ctx.ocsf.category_uid == '4'
+      name: '{{ IngestPipeline "pipeline_category_network_activity" }}'
+      ignore_missing_pipeline: true
+  - pipeline:
+      tag: pipeline_pipeline_category_application_activity
+      if: ctx.ocsf?.category_uid != null && ctx.ocsf.category_uid == '6'
+      name: '{{ IngestPipeline "pipeline_category_application_activity" }}'
+      ignore_missing_pipeline: true
+  - pipeline:
+      tag: pipeline_pipeline_category_discovery
+      if: ctx.ocsf?.category_uid != null && ctx.ocsf.category_uid == '5'
+      name: '{{ IngestPipeline "pipeline_category_discovery" }}'
+      ignore_missing_pipeline: true
+  - foreach:
+      tag: foreach_of_ocsf_process_user_groups
+      if: ctx.ocsf?.process?.user?.groups instanceof List
+      field: ocsf.process.user.groups
+      processor:
+        remove:
+          tag: remove_duplicate_custom_fields_from_ocsf_process_user_groups_array
+          if: ctx.tags == null || !(ctx.tags.contains('preserve_duplicate_custom_fields'))
+          field:
+            - _ingest._value.uid
+            - _ingest._value.name
+      ignore_failure: true
+  - foreach:
+      tag: foreach_of_ocsf_process_process_groups
+      if: ctx.ocsf?.process?.process?.groups instanceof List
+      field: ocsf.process.process.groups
+      processor:
+        remove:
+          tag: remove_duplicate_custom_fields_from_ocsf_process_process_groups_array
+          if: ctx.tags == null || !(ctx.tags.contains('preserve_duplicate_custom_fields'))
+          field:
+            - _ingest._value.uid
+            - _ingest._value.name
+      ignore_failure: true
+  - foreach:
+      tag: foreach_of_ocsf_process_parent_process_user_groups
+      if: ctx.ocsf?.process?.parent_process?.user?.groups instanceof List
+      field: ocsf.process.parent_process.user.groups
+      processor:
+        remove:
+          tag: remove_duplicate_custom_fields_from_ocsf_process_parent_process_user_groups_array
+          if: ctx.tags == null || !(ctx.tags.contains('preserve_duplicate_custom_fields'))
+          field:
+            - _ingest._value.uid
+            - _ingest._value.name
+      ignore_failure: true
+  - foreach:
+      tag: foreach_of_ocsf_actor_process_parent_process_user_groups
+      if: ctx.ocsf?.actor?.process?.parent_process?.user?.groups instanceof List
+      field: ocsf.actor.process.parent_process.user.groups
+      processor:
+        remove:
+          tag: remove_duplicate_custom_fields_from_ocsf_actor_process_parent_process_user_groups_array
+          if: ctx.tags == null || !(ctx.tags.contains('preserve_duplicate_custom_fields'))
+          field:
+            - _ingest._value.uid
+            - _ingest._value.name
+      ignore_failure: true
+  - foreach:
+      tag: foreach_of_ocsf_actor_user_groups
+      if: ctx.ocsf?.actor?.user?.groups instanceof List
+      field: ocsf.actor.user.groups
+      processor:
+        remove:
+          tag: remove_duplicate_custom_fields_from_ocsf_actor_user_groups_array
+          if: ctx.tags == null || !(ctx.tags.contains('preserve_duplicate_custom_fields'))
+          field:
+            - _ingest._value.uid
+            - _ingest._value.name
+      ignore_failure: true
+  - foreach:
+      tag: foreach_of_ocsf_job_user_groups
+      if: ctx.ocsf?.job?.user?.groups instanceof List
+      field: ocsf.job.user.groups
+      processor:
+        remove:
+          tag: remove_duplicate_custom_fields_from_ocsf_job_user_groups_array
+          if: ctx.tags == null || !(ctx.tags.contains('preserve_duplicate_custom_fields'))
+          field:
+            - _ingest._value.uid
+            - _ingest._value.name
+      ignore_failure: true
+  - foreach:
+      tag: foreach_of_ocsf_user_groups
+      if: ctx.ocsf?.user?.groups instanceof List
+      field: ocsf.user.groups
+      processor:
+        remove:
+          tag: remove_duplicate_custom_fields_from_ocsf_user_groups_array
+          if: ctx.tags == null || !(ctx.tags.contains('preserve_duplicate_custom_fields'))
+          field:
+            - _ingest._value.uid
+            - _ingest._value.name
+      ignore_failure: true
+  - foreach:
+      tag: foreach_of_ocsf_user_result_groups
+      if: ctx.ocsf?.user_result?.groups instanceof List
+      field: ocsf.user_result.groups
+      processor:
+        remove:
+          tag: remove_duplicate_custom_fields_from_ocsf_user_result_groups_array
+          if: ctx.tags == null || !(ctx.tags.contains('preserve_duplicate_custom_fields'))
+          field:
+            - _ingest._value.uid
+            - _ingest._value.name
+      ignore_failure: true
+  - foreach:
+      tag: foreach_of_ocsf_tls_sans
+      if: ctx.ocsf?.tls?.sans instanceof List
+      field: ocsf.tls.sans
+      processor:
+        remove:
+          tag: remove_duplicate_custom_fields_from_ocsf_tls_sans_array
+          if: ctx.tags == null || !(ctx.tags.contains('preserve_duplicate_custom_fields'))
+          field:
+            - _ingest._value.name
+      ignore_failure: true
+  - foreach:
+      tag: foreach_of_ocsf_attacks
+      if: ctx.ocsf?.attacks instanceof List
+      field: ocsf.attacks
+      processor:
+        remove:
+          tag: remove_duplicate_custom_fields_from_ocsf_attacks_array
+          if: ctx.tags == null || !(ctx.tags.contains('preserve_duplicate_custom_fields'))
+          field:
+            - _ingest._value.technique.uid
+            - _ingest._value.technique.name
+      ignore_failure: true
+  - foreach:
+      tag: foreach_of_ocsf_vulnerabilities
+      if: ctx.ocsf?.vulnerabilities instanceof List
+      field: ocsf.vulnerabilities
+      processor:
+        remove:
+          tag: remove_duplicate_custom_fields_from_ocsf_vulnerabilities_array
+          if: ctx.tags == null || !(ctx.tags.contains('preserve_duplicate_custom_fields'))
+          field:
+            - _ingest._value.desc
+            - _ingest._value.cve.uid
+            - _ingest._value.references
+            - _ingest._value.vendor_name
+            - _ingest._value.cve.cvss.base_score
+            - _ingest._value.cve.cvss.version
+            - _ingest._value.severity
+      ignore_failure: true
+  - foreach:
+      tag: foreach_of_ocsf_answers
+      if: ctx.ocsf?.answers instanceof List
+      field: ocsf.answers
+      processor:
+        remove:
+          tag: remove_duplicate_custom_fields_from_ocsf_answers_array
+          if: ctx.tags == null || !(ctx.tags.contains('preserve_duplicate_custom_fields'))
+          field:
+            - _ingest._value.rdata
+            - _ingest._value.packet_uid
+            - _ingest._value.class
+            - _ingest._value.type
+            - _ingest._value.ttl
+      ignore_failure: true
+  - foreach:
+      tag: foreach_of_ocsf_web_resources
+      if: ctx.ocsf?.web_resources instanceof List
+      field: ocsf.web_resources
+      processor:
+        remove:
+          tag: remove_duplicate_custom_fields_from_ocsf_web_resources_array
+          if: ctx.tags == null || !(ctx.tags.contains('preserve_duplicate_custom_fields'))
+          field:
+            - _ingest._value.desc
+            - _ingest._value.name
+            - _ingest._value.type
+      ignore_failure: true
+  - foreach:
+      tag: foreach_of_ocsf_malware
+      if: ctx.ocsf?.malware instanceof List
+      field: ocsf.malware
+      processor:
+        remove:
+          tag: remove_duplicate_custom_fields_from_ocsf_malware_array
+          if: ctx.tags == null || !(ctx.tags.contains('preserve_duplicate_custom_fields'))
+          field:
+            - _ingest._value.cvss.base_score
+            - _ingest._value.cvss.version
+            - _ingest._value.uid
+      ignore_failure: true
+  - remove:
+      tag: remove_24
+      field:
+        - aws
+      ignore_missing: true
+  - remove:
+      tag: remove_25
+      field:
+        - ocsf.time
+        - ocsf.cloud.account.uid
+        - ocsf.cloud.account.name
+        - ocsf.cloud.zone
+        - ocsf.cloud.project_uid
+        - ocsf.cloud.provider
+        - ocsf.cloud.region
+        - ocsf.metadata.event_code
+        - ocsf.end_time
+        - ocsf.metadata.uid
+        - ocsf.metadata.log_provider
+        - ocsf.metadata.sequence
+        - ocsf.severity_id
+        - ocsf.message
+        - ocsf.metadata.labels
+        - ocsf.process.container.uid
+        - ocsf.process.container.image.name
+        - ocsf.process.container.image.tag
+        - ocsf.process.container.image.labels
+        - ocsf.process.container.name
+        - ocsf.process.container.runtime
+        - ocsf.finding.created_time
+        - ocsf.finding.src_url
+        - ocsf.risk_score
+        - ocsf.process.file.accessed_time
+        - ocsf.process.file.created_time
+        - ocsf.process.file.parent_folder
+        - ocsf.process.file.uid
+        - ocsf.process.file.mime_type
+        - ocsf.process.file.modified_time
+        - ocsf.process.file.name
+        - ocsf.process.file.owner.name
+        - ocsf.process.file.path
+        - ocsf.process.file.size
+        - ocsf.process.file.type
+        - ocsf.process.file.owner.uid
+        - ocsf.process.file.signature.certificate.issuer
+        - ocsf.process.file.signature.certificate.expiration_time
+        - ocsf.process.file.signature.certificate.serial_number
+        - ocsf.process.file.signature.certificate.subject
+        - ocsf.process.file.signature.certificate.version
+        - ocsf.process.container.orchestrator
+        - ocsf.process.cmd_line
+        - ocsf.process.terminated_time
+        - ocsf.process.uid
+        - ocsf.process.egid
+        - ocsf.process.group.uid
+        - ocsf.process.group.name
+        - ocsf.process.name
+        - ocsf.process.pid
+        - ocsf.process.created_time
+        - ocsf.process.tid
+        - ocsf.process.user.domain
+        - ocsf.process.user.email_addr
+        - ocsf.process.user.full_name
+        - ocsf.process.euid
+        - ocsf.process.user.uid
+        - ocsf.process.user.name
+        - ocsf.process.parent_process.cmd_line
+        - ocsf.process.parent_process.terminated_time
+        - ocsf.process.parent_process.uid
+        - ocsf.process.parent_process.egid
+        - ocsf.process.parent_process.group.uid
+        - ocsf.process.parent_process.group.name
+        - ocsf.process.parent_process.name
+        - ocsf.process.parent_process.pid
+        - ocsf.process.parent_process.created_time
+        - ocsf.process.parent_process.tid
+        - ocsf.process.parent_process.user.domain
+        - ocsf.process.parent_process.user.email_addr
+        - ocsf.process.parent_process.user.full_name
+        - ocsf.process.parent_process.euid
+        - ocsf.process.parent_process.user.uid
+        - ocsf.process.parent_process.user.name
+        - ocsf.actor.process.cmd_line
+        - ocsf.actor.process.container.image.labels
+        - ocsf.actor.process.container.image.name
+        - ocsf.actor.process.container.image.tag
+        - ocsf.actor.process.container.name
+        - ocsf.actor.process.container.orchestrator
+        - ocsf.actor.process.container.runtime
+        - ocsf.actor.process.container.uid
+        - ocsf.actor.process.created_time
+        - ocsf.actor.process.egid
+        - ocsf.actor.process.euid
+        - ocsf.actor.process.file.accessed_time
+        - ocsf.actor.process.file.created_time
+        - ocsf.actor.process.file.mime_type
+        - ocsf.actor.process.file.modified_time
+        - ocsf.actor.process.file.name
+        - ocsf.actor.process.file.owner.name
+        - ocsf.actor.process.file.owner.uid
+        - ocsf.actor.process.file.parent_folder
+        - ocsf.actor.process.file.path
+        - ocsf.actor.process.file.signature.certificate.expiration_time
+        - ocsf.actor.process.file.signature.certificate.issuer
+        - ocsf.actor.process.file.signature.certificate.serial_number
+        - ocsf.actor.process.file.signature.certificate.subject
+        - ocsf.actor.process.file.signature.certificate.version
+        - ocsf.actor.process.file.size
+        - ocsf.actor.process.file.type
+        - ocsf.actor.process.file.uid
+        - ocsf.actor.process.group.name
+        - ocsf.actor.process.group.uid
+        - ocsf.actor.process.name
+        - ocsf.actor.process.pid
+        - ocsf.actor.process.terminated_time
+        - ocsf.actor.process.tid
+        - ocsf.actor.process.uid
+        - ocsf.actor.process.user.domain
+        - ocsf.actor.process.user.email_addr
+        - ocsf.actor.process.user.full_name
+        - ocsf.actor.process.user.name
+        - ocsf.actor.process.user.uid
+        - ocsf.actor.process.parent_process.cmd_line
+        - ocsf.actor.process.parent_process.created_time
+        - ocsf.actor.process.parent_process.egid
+        - ocsf.actor.process.parent_process.euid
+        - ocsf.actor.process.parent_process.group.name
+        - ocsf.actor.process.parent_process.group.uid
+        - ocsf.actor.process.parent_process.name
+        - ocsf.actor.process.parent_process.pid
+        - ocsf.actor.process.parent_process.terminated_time
+        - ocsf.actor.process.parent_process.tid
+        - ocsf.actor.process.parent_process.uid
+        - ocsf.actor.process.parent_process.user.domain
+        - ocsf.actor.process.parent_process.user.email_addr
+        - ocsf.actor.process.parent_process.user.full_name
+        - ocsf.actor.process.parent_process.user.name
+        - ocsf.actor.process.parent_process.user.uid
+        - ocsf.actor.user.domain
+        - ocsf.actor.user.email_addr
+        - ocsf.actor.user.full_name
+        - ocsf.actor.user.name
+        - ocsf.actor.user.uid
+        - ocsf.user.domain
+        - ocsf.user.email_addr
+        - ocsf.user.full_name
+        - ocsf.user.name
+        - ocsf.user.uid
+        - ocsf.user_result.domain
+        - ocsf.user_result.email_addr
+        - ocsf.user_result.full_name
+        - ocsf.user_result.name
+        - ocsf.user_result.uid
+        - ocsf.traffic.bytes
+        - ocsf.traffic.bytes_in
+        - ocsf.traffic.bytes_out
+        - ocsf.traffic.packets
+        - ocsf.traffic.packets_in
+        - ocsf.traffic.packets_out
+        - ocsf.tls.certificate.expiration_time
+        - ocsf.tls.certificate.issuer
+        - ocsf.tls.certificate.serial_number
+        - ocsf.tls.certificate.subject
+        - ocsf.tls.certificate.version
+        - ocsf.tls.cipher
+        - ocsf.tls.client_ciphers
+        - ocsf.tls.ja3_hash.value
+        - ocsf.tls.ja3s_hash.value
+        - ocsf.tls.sni
+        - ocsf.tls.version
+        - ocsf.start_time
+        - ocsf.src_endpoint.domain
+        - ocsf.src_endpoint.hostname
+        - ocsf.src_endpoint.ip
+        - ocsf.src_endpoint.location.city
+        - ocsf.src_endpoint.location.continent
+        - ocsf.src_endpoint.location.coordinates
+        - ocsf.src_endpoint.location.country
+        - ocsf.src_endpoint.location.desc
+        - ocsf.src_endpoint.location.postal_code
+        - ocsf.src_endpoint.location.region
+        - ocsf.src_endpoint.mac
+        - ocsf.src_endpoint.port
+        - ocsf.src_endpoint.svc_name
+        - ocsf.dst_endpoint.domain
+        - ocsf.dst_endpoint.hostname
+        - ocsf.dst_endpoint.ip
+        - ocsf.dst_endpoint.location.city
+        - ocsf.dst_endpoint.location.continent
+        - ocsf.dst_endpoint.location.coordinates
+        - ocsf.dst_endpoint.location.country
+        - ocsf.dst_endpoint.location.desc
+        - ocsf.dst_endpoint.location.postal_code
+        - ocsf.dst_endpoint.location.region
+        - ocsf.dst_endpoint.mac
+        - ocsf.dst_endpoint.port
+        - ocsf.dst_endpoint.svc_name
+        - ocsf.connection_info.protocol_name
+        - ocsf.connection_info.protocol_num
+        - ocsf.connection_info.protocol_ver
+        - ocsf.device.domain
+        - ocsf.device.hostname
+        - ocsf.device.ip
+        - ocsf.device.location.city
+        - ocsf.device.location.continent
+        - ocsf.device.location.coordinates
+        - ocsf.device.location.country
+        - ocsf.device.location.desc
+        - ocsf.device.location.postal_code
+        - ocsf.device.location.region
+        - ocsf.device.mac
+        - ocsf.device.name
+        - ocsf.device.os.build
+        - ocsf.device.os.name
+        - ocsf.device.risk_level
+        - ocsf.device.risk_score
+        - ocsf.device.type
+        - ocsf.device.uid
+        - ocsf.device.vlan_uid
+        - ocsf.http_request.http_method
+        - ocsf.http_request.referrer
+        - ocsf.http_request.uid
+        - ocsf.http_request.url.hostname
+        - ocsf.http_request.url.path
+        - ocsf.http_request.url.port
+        - ocsf.http_request.url.query_string
+        - ocsf.http_request.url.scheme
+        - ocsf.http_request.url.subdomain
+        - ocsf.http_request.url.url_string
+        - ocsf.http_request.user_agent
+        - ocsf.http_request.version
+        - ocsf.query.hostname
+        - ocsf.query.packet_uid
+        - ocsf.query.class
+        - ocsf.query.type
+        - ocsf.rcode
+        - ocsf.service.name
+        - ocsf.service.uid
+        - ocsf.service.version
+        - ocsf.group.name
+        - ocsf.group.uid
+        - ocsf.file.accessed_time
+        - ocsf.file.created_time
+        - ocsf.file.mime_type
+        - ocsf.file.modified_time
+        - ocsf.file.name
+        - ocsf.file.owner.name
+        - ocsf.file.owner.uid
+        - ocsf.file.parent_folder
+        - ocsf.file.path
+        - ocsf.file.signature.certificate.expiration_time
+        - ocsf.file.signature.certificate.issuer
+        - ocsf.file.signature.certificate.serial_number
+        - ocsf.file.signature.certificate.subject
+        - ocsf.file.signature.certificate.version
+        - ocsf.file.size
+        - ocsf.file.type
+        - ocsf.file.uid
+        - ocsf.driver.file.accessed_time
+        - ocsf.driver.file.created_time
+        - ocsf.driver.file.mime_type
+        - ocsf.driver.file.modified_time
+        - ocsf.driver.file.name
+        - ocsf.driver.file.owner.name
+        - ocsf.driver.file.owner.uid
+        - ocsf.driver.file.parent_folder
+        - ocsf.driver.file.path
+        - ocsf.driver.file.signature.certificate.expiration_time
+        - ocsf.driver.file.signature.certificate.issuer
+        - ocsf.driver.file.signature.certificate.serial_number
+        - ocsf.driver.file.signature.certificate.subject
+        - ocsf.driver.file.signature.certificate.version
+        - ocsf.driver.file.size
+        - ocsf.driver.file.type
+        - ocsf.driver.file.uid
+        - ocsf.module.file.accessed_time
+        - ocsf.module.file.created_time
+        - ocsf.module.file.mime_type
+        - ocsf.module.file.modified_time
+        - ocsf.module.file.name
+        - ocsf.module.file.owner.name
+        - ocsf.module.file.owner.uid
+        - ocsf.module.file.parent_folder
+        - ocsf.module.file.path
+        - ocsf.module.file.signature.certificate.expiration_time
+        - ocsf.module.file.signature.certificate.issuer
+        - ocsf.module.file.signature.certificate.serial_number
+        - ocsf.module.file.signature.certificate.subject
+        - ocsf.module.file.signature.certificate.version
+        - ocsf.module.file.size
+        - ocsf.module.file.type
+        - ocsf.module.file.uid
+        - ocsf.job.file.accessed_time
+        - ocsf.job.file.created_time
+        - ocsf.job.file.mime_type
+        - ocsf.job.file.modified_time
+        - ocsf.job.file.name
+        - ocsf.job.file.owner.name
+        - ocsf.job.file.owner.uid
+        - ocsf.job.file.parent_folder
+        - ocsf.job.file.path
+        - ocsf.job.file.signature.certificate.expiration_time
+        - ocsf.job.file.signature.certificate.issuer
+        - ocsf.job.file.signature.certificate.serial_number
+        - ocsf.job.file.signature.certificate.subject
+        - ocsf.job.file.signature.certificate.version
+        - ocsf.job.file.size
+        - ocsf.job.file.type
+        - ocsf.job.file.uid
+        - ocsf.job.user.domain
+        - ocsf.job.user.email_addr
+        - ocsf.job.user.full_name
+        - ocsf.job.user.name
+        - ocsf.job.user.uid
+        - ocsf.exit_code
+        - ocsf.cis_benchmark_result.rule.category
+        - ocsf.cis_benchmark_result.rule.desc
+        - ocsf.cis_benchmark_result.rule.name
+        - ocsf.cis_benchmark_result.rule.uid
+        - ocsf.cis_benchmark_result.rule.version
+        - ocsf.http_response.code
+        - ocsf.http_response.length
+        - ocsf.http_response.message
+        - ocsf.relay.hostname
+        - ocsf.relay.ip
+        - ocsf.relay.mac
+        - ocsf.relay.name
+        - ocsf.relay.type
+        - ocsf.request.uid
+        - ocsf.response.code
+        - ocsf.certificate_chain
+        - ocsf.email.cc
+        - ocsf.email.uid
+        - ocsf.email.from
+        - ocsf.email.message_uid
+        - ocsf.email.reply_to
+        - ocsf.email.subject
+        - ocsf.email.to
+        - ocsf.email_uid
+        - ocsf.url.query_string
+        - ocsf.url.hostname
+        - ocsf.url.path
+        - ocsf.url.port
+        - ocsf.url.scheme
+        - ocsf.url.subdomain
+        - ocsf.url.url_string
+      ignore_missing: true
+  - script:
+      description: Drops null/empty values recursively.
+      tag: painless_remove_null
+      source: |-
+        boolean drop(Object object) {
+          if (object == null || object == '') {
+            return true;
+          } else if (object instanceof Map) {
+            ((Map) object).values().removeIf(v -> drop(v));
+            return (((Map) object).size() == 0);
+          } else if (object instanceof List) {
+            ((List) object).removeIf(v -> drop(v));
+            return (((List) object).length == 0);
+          }
+          return false;
+        }
+        drop(ctx);
+  - foreach:
+      tag: foreach_of_dns_answers_ttl
+      if: ctx.dns?.answers?.ttl instanceof List
+      field: dns.answers.ttl
+      processor:
+        convert:
+          tag: convert_dns_answers_ttl_to_long
+          field: _ingest._value
+          type: long
+          ignore_missing: true
+          on_failure:
+            - remove:
+                tag: remove_26
+                field:
+                  - _ingest._value
+                ignore_missing: true
+            - append:
+                tag: append_error_message_26
+                field: error.message
+                value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
+      ignore_failure: true
+  - foreach:
+      tag: foreach_of_vulnerability_score_base
+      if: ctx.vulnerability?.score?.base instanceof List
+      field: vulnerability.score.base
+      processor:
+        convert:
+          tag: convert_vulnerability_score_base_to_double
+          field: _ingest._value
+          type: double
+          ignore_missing: true
+          on_failure:
+            - remove:
+                tag: remove_27
+                field:
+                  - _ingest._value
+                ignore_missing: true
+            - append:
+                tag: append_error_message_27
+                field: error.message
+                value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
+      ignore_failure: true
+
+  # Error handling.
+  - set:
+      tag: set_event_pipeline_2
+      if: ctx.error?.message != null
+      field: event.pipeline
+      value: pipeline_error
+  - append:
+      tag: append_tags_3
+      if: ctx.error?.message != null
+      field: tags
+      value: preserve_original_event
+      allow_duplicates: false
+on_failure:
+  - set:
+      tag: set_event_pipeline_1
+      field: event.pipeline
+      value: pipeline_error
+  - append:
+      tag: append_event_message
+      field: event.message
+      value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
+  - append:
+      tag: append_tags_1
+      field: tags
+      value: preserve_original_event
+      allow_duplicates: false
