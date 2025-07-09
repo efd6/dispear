@@ -34,7 +34,7 @@ func main() {
 	RENAME("message", "event.original").
 		IF("ctx.event?.original == null").
 		IGNORE_MISSING(true)
-	JSON(PkgRoot, "event.original").ON_ERROR(
+	JSON(PkgRoot, "event.original").ON_FAILURE(
 		APPEND("error.message", errorFormat),
 	)
 	SCRIPT().
@@ -73,7 +73,7 @@ func main() {
                 return null;
             }
             processFields(ctx.ocsf);
-	`).ON_ERROR(
+	`).ON_FAILURE(
 		APPEND("error.message", errorFormat),
 	)
 
@@ -268,16 +268,16 @@ func main() {
 
 	LOWERCASE("event.action", "ocsf.activity_name").
 		IGNORE_MISSING(true).
-		ON_ERROR(removeErrorHandler("ocsf.activity_name")...)
+		ON_FAILURE(removeErrorHandler("ocsf.activity_name")...)
 	GSUB("", "event.action", "[: ]", "-").
 		IGNORE_MISSING(true).
-		ON_ERROR(removeErrorHandler("event.action")...)
+		ON_FAILURE(removeErrorHandler("event.action")...)
 	SET("event.code").
 		COPY_FROM("ocsf.metadata.event_code").
 		IGNORE_EMPTY(true)
 	CONVERT("", "ocsf.duration", "long").
 		IGNORE_MISSING(true).
-		ON_ERROR(removeErrorHandler("ocsf.duration")...)
+		ON_FAILURE(removeErrorHandler("ocsf.duration")...)
 	SCRIPT().
 		DESCRIPTION("Convert duration from milliseconds to nanoseconds.").
 		TAG("script_duration_ms_to_ns").
@@ -292,7 +292,7 @@ func main() {
 		IGNORE_EMPTY(true)
 	CONVERT("", "ocsf.metadata.sequence", "long").
 		IGNORE_MISSING(true).
-		ON_ERROR(removeErrorHandler("ocsf.metadata.sequence")...)
+		ON_FAILURE(removeErrorHandler("ocsf.metadata.sequence")...)
 	SET("event.sequence").COPY_FROM("ocsf.metadata.sequence").
 		IGNORE_EMPTY(true)
 	SET("message").COPY_FROM("ocsf.message").
@@ -316,17 +316,17 @@ func main() {
 	} {
 		CONVERT("", s, "long").
 			IGNORE_MISSING(true).
-			ON_ERROR(removeErrorHandler(s)...)
+			ON_FAILURE(removeErrorHandler(s)...)
 	}
 	DATE("ocsf.end_time_dt", "ocsf.end_time_dt", "ISO8601").
 		IF("ctx.ocsf?.end_time_dt != null && ctx.ocsf.end_time_dt != ''").
-		ON_ERROR(removeErrorHandler("ocsf.end_time_dt")...)
+		ON_FAILURE(removeErrorHandler("ocsf.end_time_dt")...)
 	SET("event.end").
 		COPY_FROM("ocsf.end_time_dt").
 		IGNORE_EMPTY(true)
 	DATE("ocsf.end_time", "ocsf.end_time", "UNIX_MS").
 		IF("ctx.ocsf?.end_time != null && ctx.ocsf.end_time != ''").
-		ON_ERROR(removeErrorHandler("ocsf.end_time")...)
+		ON_FAILURE(removeErrorHandler("ocsf.end_time")...)
 	SET("event.end").
 		COPY_FROM("ocsf.end_time").
 		IGNORE_EMPTY(true)
@@ -376,13 +376,13 @@ func main() {
 	} {
 		DATE(d.dst, d.src, d.format).
 			IF(d.cond).
-			ON_ERROR(removeErrorHandler("ocsf.time_dt")...)
+			ON_FAILURE(removeErrorHandler("ocsf.time_dt")...)
 	}
 
 	FOREACH("ocsf.observables",
 		CONVERT("", "_ingest._value.reputation.base_score", "double").
 			IGNORE_MISSING(true).
-			ON_ERROR(removeErrorHandler("_ingest._value.reputation.base_score")...),
+			ON_FAILURE(removeErrorHandler("_ingest._value.reputation.base_score")...),
 	).IF("ctx.ocsf?.observables instanceof List").
 		IGNORE_FAILURE(true)
 	for _, f := range []string{
@@ -397,7 +397,7 @@ func main() {
 	}
 	CONVERT("", "ocsf.severity_id", "long").
 		IGNORE_MISSING(true).
-		ON_ERROR(removeErrorHandler("ocsf.severity_id")...)
+		ON_FAILURE(removeErrorHandler("ocsf.severity_id")...)
 	SET("event.severity").
 		COPY_FROM("ocsf.severity_id").
 		IGNORE_EMPTY(true)
@@ -410,7 +410,7 @@ func main() {
 	} {
 		DATE(d.src, d.src, d.format).
 			IF(d.cond).
-			ON_ERROR(removeErrorHandler(d.src)...)
+			ON_FAILURE(removeErrorHandler(d.src)...)
 		SET("event.start").
 			COPY_FROM(d.src).
 			IGNORE_EMPTY(true)
@@ -426,12 +426,12 @@ func main() {
 	}
 	CONVERT("", "ocsf.timezone_offset", "long").
 		IGNORE_MISSING(true).
-		ON_ERROR(removeErrorHandler("ocsf.timezone_offset")...)
+		ON_FAILURE(removeErrorHandler("ocsf.timezone_offset")...)
 	CONVERT("", "ocsf.type_uid", "string").
 		IGNORE_MISSING(true)
 	JSON("", "ocsf.raw_data").
 		IF("ctx.ocsf?.raw_data instanceof String").
-		ON_ERROR(RENAME("ocsf.raw_data", "ocsf.raw_data_keyword"))
+		ON_FAILURE(RENAME("ocsf.raw_data", "ocsf.raw_data_keyword"))
 
 	for _, p := range []struct{ uids, cond, name string }{
 		{
@@ -639,7 +639,7 @@ func main() {
 			CONVERT("", "_ingest._value", c.typ).
 				TAG("convert_"+c.src+"_to_"+c.typ).
 				IGNORE_MISSING(true).
-				ON_ERROR(removeErrorHandler("_ingest._value")...),
+				ON_FAILURE(removeErrorHandler("_ingest._value")...),
 		).IF(c.cond).
 			IGNORE_FAILURE(true)
 	}

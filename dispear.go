@@ -185,7 +185,7 @@ func (pipe *pipeline) DEPRECATED(t bool) {
 
 func (pipe *pipeline) ON_FAILURE(h ...Renderer) {
 	if pipe.ErrorHandler != nil {
-		panic("multiple ON_ERROR calls")
+		panic("multiple ON_FAILURE calls")
 	}
 	pipe.ErrorHandler = h
 	for i := range h {
@@ -339,12 +339,12 @@ func (p *shared[P]) IGNORE_FAILURE(t bool) P {
 	return p.parent
 }
 
-// ON_ERROR sets the on_failure field to the processors in h. Processors that
+// ON_FAILURE sets the on_failure field to the processors in h. Processors that
 // are added to a processor's on_failure field are removed from the global
 // context.
-func (p *shared[P]) ON_ERROR(h ...Renderer) P {
+func (p *shared[P]) ON_FAILURE(h ...Renderer) P {
 	if p.ErrorHandler != nil {
-		panic("multiple ON_ERROR calls")
+		panic("multiple ON_FAILURE calls")
 	}
 	p.ErrorHandler = h
 	for i := range h {
