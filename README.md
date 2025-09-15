@@ -72,16 +72,16 @@
     ```
     	LOWERCASE("event.action", "ds.activity_name").
     		IGNORE_MISSING(true).
-    		ON_ERROR(removeErrorHandler("ds.activity_name")...)
+    		ON_FAILURE(removeErrorHandler("ds.activity_name")...)
     	GSUB("", "event.action", "[: ]", "-").
     		IGNORE_MISSING(true).
-    		ON_ERROR(removeErrorHandler("event.action")...)
+    		ON_FAILURE(removeErrorHandler("event.action")...)
     	SET("event.code").
     		COPY_FROM("ds.metadata.event_code").
     		IGNORE_EMPTY(true)
     	CONVERT("", "ds.duration", "long").
     		IGNORE_MISSING(true).
-    		ON_ERROR(removeErrorHandler("ds.duration")...)
+    		ON_FAILURE(removeErrorHandler("ds.duration")...)
     ```
 
 
@@ -111,7 +111,7 @@ func main() {
 	RENAME("message", "event.original").
 		IF("ctx.event?.original == null").
 		IGNORE_MISSING(true)
-	JSON(PkgRoot, "event.original").ON_ERROR(
+	JSON(PkgRoot, "event.original").ON_FAILURE(
 		APPEND("error.message", errorFormat),
 	)
 
