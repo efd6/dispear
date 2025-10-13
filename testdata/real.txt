@@ -256,7 +256,6 @@ func main() {
 	BLANK().COMMENT("Set cloud details.")
 	for _, s := range []struct{ dst, src string }{
 		{dst: "cloud.account.id", src: "ocsf.cloud.account.uid"},
-		{dst: "cloud.account.id", src: "ocsf.cloud.account.uid"},
 		{dst: "cloud.account.name", src: "ocsf.cloud.account.name"},
 		{dst: "cloud.availability_zone", src: "ocsf.cloud.zone"},
 		{dst: "cloud.project.id", src: "ocsf.cloud.project_uid"},
@@ -1287,12 +1286,7 @@ processors:
 
   # Set cloud details.
   - set:
-      tag: set_cloud_account_id_bef9c95e
-      field: cloud.account.id
-      copy_from: ocsf.cloud.account.uid
-      ignore_empty_value: true
-  - set:
-      tag: set_cloud_account_id_bdf9c7cb
+      tag: set_cloud_account_id_2601e3db
       field: cloud.account.id
       copy_from: ocsf.cloud.account.uid
       ignore_empty_value: true

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"io"
+	"log"
 	"os"
 	"runtime"
 	"slices"
@@ -93,6 +94,7 @@ func (c *Context) Generate() error {
 		}
 	}
 	// Ensure no collisions.
+	var maxCollisions int
 	for {
 		tags := make(map[string][]*semantic)
 		for _, r := range c.tags {
@@ -114,6 +116,9 @@ func (c *Context) Generate() error {
 			collision = true
 			for j, r := range retaggers {
 				r.collision += j + 1
+				if r.collision > maxCollisions {
+					maxCollisions = r.collision
+				}
 			}
 		}
 		if !collision {
@@ -125,6 +130,9 @@ func (c *Context) Generate() error {
 		sem := r.semantics()
 		tag := r.tag() + "_" + sem.hash
 		r.retag(tag)
+	}
+	if maxCollisions != 0 {
+		log.Printf("hash collisions in original semantics (max=%d)", maxCollisions)
 	}
 
 	var buf bytes.Buffer
