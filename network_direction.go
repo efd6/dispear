@@ -25,9 +25,9 @@ func NETWORK_DIRECTION(dst, srcip, dstip string) *NetworkDirectionProc {
 	if dst != "" {
 		p.Tag += "_into_" + PathCleaner.Replace(dst)
 	}
+	p.template = networkDirectionTemplate
 	p.parent = p
 	ctx.Add(p)
-	ctx.tags[p.Tag] = append(ctx.tags[p.Tag], &p.shared)
 	return p
 }
 
@@ -66,11 +66,18 @@ func (p *NetworkDirectionProc) IGNORE_MISSING(t bool) *NetworkDirectionProc {
 	return p
 }
 
-func (p *NetworkDirectionProc) Render(dst io.Writer) error {
-	networkDirectionTemplate := template.Must(template.New("network_direction").Funcs(templateHelpers).Parse(`
+func (p *NetworkDirectionProc) Render(dst io.Writer, notag bool) error {
+	oldNotag := p.parent.SemanticsOnly
+	p.parent.SemanticsOnly = notag
+	err := p.template.Execute(dst, p)
+	p.parent.SemanticsOnly = oldNotag
+	return err
+}
+
+var networkDirectionTemplate = template.Must(template.New("network_direction").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
 {{end}}- network_direction:` +
-		preamble + `
+	preamble + `
 {{- with .TargetField}}
     target_field: {{yaml_string .}}
 {{- end -}}
@@ -90,7 +97,5 @@ func (p *NetworkDirectionProc) Render(dst io.Writer) error {
 {{- with .IgnoreMissing}}
     ignore_missing: {{.}}
 {{- end -}}` +
-		postamble,
-	))
-	return networkDirectionTemplate.Execute(dst, p)
-}
+	postamble,
+))

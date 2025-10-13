@@ -20,7 +20,7 @@ func main() {
 description: dissect
 processors:
   - dissect:
-      tag: dissect_src
+      tag: dissect_src_f0dfce57
       field: src
       pattern: '%{ONE THING}'
       append_separator: '-'

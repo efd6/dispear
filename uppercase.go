@@ -20,9 +20,9 @@ func UPPERCASE(dst, src string) *UppercaseProc {
 	if dst != "" {
 		p.Tag += "_into_" + PathCleaner.Replace(dst)
 	}
+	p.template = uppercaseTemplate
 	p.parent = p
 	ctx.Add(p)
-	ctx.tags[p.Tag] = append(ctx.tags[p.Tag], &p.shared)
 	return p
 }
 
@@ -42,14 +42,21 @@ func (p *UppercaseProc) IGNORE_MISSING(t bool) *UppercaseProc {
 	return p
 }
 
-func (p *UppercaseProc) Render(dst io.Writer) error {
+func (p *UppercaseProc) Render(dst io.Writer, notag bool) error {
 	if p.Field == "" {
 		return fmt.Errorf("no src for UPPERCASE %s:%d: %s", p.file, p.line, p.Tag)
 	}
-	uppercaseTemplate := template.Must(template.New("uppercase").Funcs(templateHelpers).Parse(`
+	oldNotag := p.parent.SemanticsOnly
+	p.parent.SemanticsOnly = notag
+	err := p.template.Execute(dst, p)
+	p.parent.SemanticsOnly = oldNotag
+	return err
+}
+
+var uppercaseTemplate = template.Must(template.New("uppercase").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
 {{end}}- uppercase:` +
-		preamble + `
+	preamble + `
     field: {{yaml_string .Field}}
 {{- with .TargetField}}
     target_field: {{yaml_string .}}
@@ -57,7 +64,5 @@ func (p *UppercaseProc) Render(dst io.Writer) error {
 {{- with .IgnoreMissing}}
     ignore_missing: {{.}}
 {{- end -}}` +
-		postamble,
-	))
-	return uppercaseTemplate.Execute(dst, p)
-}
+	postamble,
+))

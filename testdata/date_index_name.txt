@@ -20,7 +20,7 @@ func main() {
 description: date_index_name
 processors:
   - date_index_name:
-      tag: date_index_name_dst_round_to_M
+      tag: date_index_name_dst_round_to_M_2ec96d7e
       field: dst
       date_rounding: M
       date_formats:

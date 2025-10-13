@@ -13,9 +13,9 @@ func DOT_EXPANDER(src string) *DotExpanderProc {
 	p := &DotExpanderProc{Field: src}
 	p.recDecl()
 	p.Tag = "dot_expander_from_" + PathCleaner.Replace(src)
+	p.template = dotExpanderTemplate
 	p.parent = p
 	ctx.Add(p)
-	ctx.tags[p.Tag] = append(ctx.tags[p.Tag], &p.shared)
 	return p
 }
 
@@ -43,14 +43,21 @@ func (p *DotExpanderProc) OVERRIDE(t bool) *DotExpanderProc {
 	return p
 }
 
-func (p *DotExpanderProc) Render(dst io.Writer) error {
+func (p *DotExpanderProc) Render(dst io.Writer, notag bool) error {
 	if p.Field == "" {
 		return fmt.Errorf("no src for DOT_EXPANDER %s:%d: %s", p.file, p.line, p.Tag)
 	}
-	dropTemplate := template.Must(template.New("drop").Funcs(templateHelpers).Parse(`
+	oldNotag := p.parent.SemanticsOnly
+	p.parent.SemanticsOnly = notag
+	err := p.template.Execute(dst, p)
+	p.parent.SemanticsOnly = oldNotag
+	return err
+}
+
+var dotExpanderTemplate = template.Must(template.New("dot_expander").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
 {{end}}- dot_expander:` +
-		preamble + `
+	preamble + `
     field: {{yaml_string .Field}}
 {{- with .Path}}
     path: {{yaml_string .}}
@@ -58,7 +65,5 @@ func (p *DotExpanderProc) Render(dst io.Writer) error {
 {{- with .Override}}
     override: {{.}}
 {{- end -}}` +
-		postamble,
-	))
-	return dropTemplate.Execute(dst, p)
-}
+	postamble,
+))

@@ -20,9 +20,9 @@ func URI_PARTS(dst, src string) *URIPartsProc {
 	if dst != "" {
 		p.Tag += "_into_" + PathCleaner.Replace(dst)
 	}
+	p.template = uriPartsTemplate
 	p.parent = p
 	ctx.Add(p)
-	ctx.tags[p.Tag] = append(ctx.tags[p.Tag], &p.shared)
 	return p
 }
 
@@ -60,14 +60,21 @@ func (p *URIPartsProc) IGNORE_MISSING(t bool) *URIPartsProc {
 	return p
 }
 
-func (p *URIPartsProc) Render(dst io.Writer) error {
+func (p *URIPartsProc) Render(dst io.Writer, notag bool) error {
 	if p.Field == "" {
 		return fmt.Errorf("no src for URI_PARTS %s:%d: %s", p.file, p.line, p.Tag)
 	}
-	uriPartsTemplate := template.Must(template.New("uri_parts").Funcs(templateHelpers).Parse(`
+	oldNotag := p.parent.SemanticsOnly
+	p.parent.SemanticsOnly = notag
+	err := p.template.Execute(dst, p)
+	p.parent.SemanticsOnly = oldNotag
+	return err
+}
+
+var uriPartsTemplate = template.Must(template.New("uri_parts").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
 {{end}}- uri_parts:` +
-		preamble + `
+	preamble + `
     field: {{yaml_string .Field}}
 {{- with .TargetField}}
     target_field: {{yaml_string .}}
@@ -81,7 +88,5 @@ func (p *URIPartsProc) Render(dst io.Writer) error {
 {{- with .IgnoreMissing}}
     ignore_missing: {{.}}
 {{- end -}}` +
-		postamble,
-	))
-	return uriPartsTemplate.Execute(dst, p)
-}
+	postamble,
+))

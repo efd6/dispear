@@ -20,9 +20,9 @@ func GEO_GRID(dst, src, typ string) *GeoGridProc {
 	if dst != "" {
 		p.Tag += "_into_" + PathCleaner.Replace(dst)
 	}
+	p.template = geoGridTemplate
 	p.parent = p
 	ctx.Add(p)
-	ctx.tags[p.Tag] = append(ctx.tags[p.Tag], &p.shared)
 	return p
 }
 
@@ -88,17 +88,24 @@ func (p *GeoGridProc) TARGET_FORMAT(s string) *GeoGridProc {
 	return p
 }
 
-func (p *GeoGridProc) Render(dst io.Writer) error {
+func (p *GeoGridProc) Render(dst io.Writer, notag bool) error {
 	if p.Field == "" {
 		return fmt.Errorf("no src for GEO_GRID %s:%d: %s", p.file, p.line, p.Tag)
 	}
 	if p.TileType == "" {
 		return fmt.Errorf("no tile type for GEO_GRID %s:%d: %s", p.file, p.line, p.Tag)
 	}
-	geoGridTemplate := template.Must(template.New("geo_grid").Funcs(templateHelpers).Parse(`
+	oldNotag := p.parent.SemanticsOnly
+	p.parent.SemanticsOnly = notag
+	err := p.template.Execute(dst, p)
+	p.parent.SemanticsOnly = oldNotag
+	return err
+}
+
+var geoGridTemplate = template.Must(template.New("geo_grid").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
 {{end}}- geo_grid:` +
-		preamble + `
+	preamble + `
     field: {{yaml_string .Field}}
     tile_type: {{yaml_string .TileType}}
 {{- with .TargetField}}
@@ -122,7 +129,5 @@ func (p *GeoGridProc) Render(dst io.Writer) error {
 {{- with .IgnoreMissing}}
     ignore_missing: {{.}}
 {{- end -}}` +
-		postamble,
-	))
-	return geoGridTemplate.Execute(dst, p)
-}
+	postamble,
+))

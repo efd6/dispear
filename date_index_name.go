@@ -13,9 +13,9 @@ func DATE_INDEX_NAME(src, rounding string) *DateIndexNameProc {
 	p := &DateIndexNameProc{Field: src, Rounding: rounding}
 	p.recDecl()
 	p.Tag = "date_index_name_" + PathCleaner.Replace(src) + "_round_to_" + rounding
+	p.template = dateIndexNameTemplate
 	p.parent = p
 	ctx.Add(p)
-	ctx.tags[p.Tag] = append(ctx.tags[p.Tag], &p.shared)
 	return p
 }
 
@@ -72,17 +72,24 @@ func (p *DateIndexNameProc) TIMEZONE(s string) *DateIndexNameProc {
 	return p
 }
 
-func (p *DateIndexNameProc) Render(dst io.Writer) error {
+func (p *DateIndexNameProc) Render(dst io.Writer, notag bool) error {
 	if p.Field == "" {
 		return fmt.Errorf("no src for DATE_INDEX_NAME %s:%d: %s", p.file, p.line, p.Tag)
 	}
 	if p.Rounding == "" {
 		return fmt.Errorf("no rounding for DATE_INDEX_NAME %s:%d: %s", p.file, p.line, p.Tag)
 	}
-	dateIndexNameTemplate := template.Must(template.New("date_index_name").Funcs(templateHelpers).Parse(`
+	oldNotag := p.parent.SemanticsOnly
+	p.parent.SemanticsOnly = notag
+	err := p.template.Execute(dst, p)
+	p.parent.SemanticsOnly = oldNotag
+	return err
+}
+
+var dateIndexNameTemplate = template.Must(template.New("date_index_name").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
 {{end}}- date_index_name:` +
-		preamble + `
+	preamble + `
     field: {{yaml_string .Field}}
     date_rounding: {{yaml_string .Rounding}}
 {{- with .Formats}}
@@ -101,7 +108,5 @@ func (p *DateIndexNameProc) Render(dst io.Writer) error {
 {{- with .Timezone}}
     timezone: {{yaml_string .}}
 {{- end -}}` +
-		postamble,
-	))
-	return dateIndexNameTemplate.Execute(dst, p)
-}
+	postamble,
+))

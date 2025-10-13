@@ -14,9 +14,9 @@ func REDACT(src string, patterns ...string) *RedactProc {
 	p := &RedactProc{Field: src, Patterns: patterns}
 	p.recDecl()
 	p.Tag = "redact_" + PathCleaner.Replace(src)
+	p.template = redactTemplate
 	p.parent = p
 	ctx.Add(p)
-	ctx.tags[p.Tag] = append(ctx.tags[p.Tag], &p.shared)
 	return p
 }
 
@@ -87,17 +87,24 @@ func (p *RedactProc) TRACE_REDACT(t bool) *RedactProc {
 	return p
 }
 
-func (p *RedactProc) Render(dst io.Writer) error {
+func (p *RedactProc) Render(dst io.Writer, notag bool) error {
 	if p.Field == "" {
 		return fmt.Errorf("no src for REDACT %s:%d: %s", p.file, p.line, p.Tag)
 	}
 	if len(p.Patterns) == 0 {
 		return fmt.Errorf("no patterns for REDACT %s:%d: %s", p.file, p.line, p.Tag)
 	}
-	redactTemplate := template.Must(template.New("redact").Funcs(templateHelpers).Parse(`
+	oldNotag := p.parent.SemanticsOnly
+	p.parent.SemanticsOnly = notag
+	err := p.template.Execute(dst, p)
+	p.parent.SemanticsOnly = oldNotag
+	return err
+}
+
+var redactTemplate = template.Must(template.New("redact").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
 {{end}}- redact:` +
-		preamble + `
+	preamble + `
     field: {{yaml_string .Field}}
 {{- with .Patterns}}
     patterns:{{range .}}
@@ -122,7 +129,5 @@ func (p *RedactProc) Render(dst io.Writer) error {
 {{- with .IgnoreMissing}}
     ignore_missing: {{.}}
 {{- end -}}` +
-		postamble,
-	))
-	return redactTemplate.Execute(dst, p)
-}
+	postamble,
+))

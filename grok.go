@@ -14,9 +14,9 @@ func GROK(src string, patterns ...string) *GrokProc {
 	p := &GrokProc{Field: src, Patterns: patterns}
 	p.recDecl()
 	p.Tag = "grok_" + PathCleaner.Replace(src)
+	p.template = grokTemplate
 	p.parent = p
 	ctx.Add(p)
-	ctx.tags[p.Tag] = append(ctx.tags[p.Tag], &p.shared)
 	return p
 }
 
@@ -69,17 +69,24 @@ func (p *GrokProc) TRACE_MATCH(t bool) *GrokProc {
 	return p
 }
 
-func (p *GrokProc) Render(dst io.Writer) error {
+func (p *GrokProc) Render(dst io.Writer, notag bool) error {
 	if p.Field == "" {
 		return fmt.Errorf("no src for GROK %s:%d: %s", p.file, p.line, p.Tag)
 	}
 	if len(p.Patterns) == 0 {
 		return fmt.Errorf("no patterns for GROK %s:%d: %s", p.file, p.line, p.Tag)
 	}
-	grokTemplate := template.Must(template.New("grok").Funcs(templateHelpers).Parse(`
+	oldNotag := p.parent.SemanticsOnly
+	p.parent.SemanticsOnly = notag
+	err := p.template.Execute(dst, p)
+	p.parent.SemanticsOnly = oldNotag
+	return err
+}
+
+var grokTemplate = template.Must(template.New("grok").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
 {{end}}- grok:` +
-		preamble + `
+	preamble + `
     field: {{yaml_string .Field}}
 {{- with .Patterns}}
     patterns:{{range .}}
@@ -92,7 +99,5 @@ func (p *GrokProc) Render(dst io.Writer) error {
 {{- with .IgnoreMissing}}
     ignore_missing: {{.}}
 {{- end -}}` +
-		postamble,
-	))
-	return grokTemplate.Execute(dst, p)
-}
+	postamble,
+))

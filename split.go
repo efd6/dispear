@@ -20,9 +20,9 @@ func SPLIT(dst, src, sep string) *SplitProc {
 	if dst != "" {
 		p.Tag += "_into_" + PathCleaner.Replace(dst)
 	}
+	p.template = splitTemplate
 	p.parent = p
 	ctx.Add(p)
-	ctx.tags[p.Tag] = append(ctx.tags[p.Tag], &p.shared)
 	return p
 }
 
@@ -52,17 +52,24 @@ func (p *SplitProc) IGNORE_MISSING(t bool) *SplitProc {
 	return p
 }
 
-func (p *SplitProc) Render(dst io.Writer) error {
+func (p *SplitProc) Render(dst io.Writer, notag bool) error {
 	if p.Field == "" {
 		return fmt.Errorf("no src for SPLIT %s:%d: %s", p.file, p.line, p.Tag)
 	}
 	if p.Separator == "" {
 		return fmt.Errorf("no separator for SPLIT %s:%d: %s", p.file, p.line, p.Tag)
 	}
-	splitTemplate := template.Must(template.New("split").Funcs(templateHelpers).Parse(`
+	oldNotag := p.parent.SemanticsOnly
+	p.parent.SemanticsOnly = notag
+	err := p.template.Execute(dst, p)
+	p.parent.SemanticsOnly = oldNotag
+	return err
+}
+
+var splitTemplate = template.Must(template.New("split").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
 {{end}}- split:` +
-		preamble + `
+	preamble + `
     field: {{yaml_string .Field}}
     separator: {{yaml_string .Separator}}
 {{- with .TargetField}}
@@ -74,7 +81,5 @@ func (p *SplitProc) Render(dst io.Writer) error {
 {{- with .IgnoreMissing}}
     ignore_missing: {{.}}
 {{- end -}}` +
-		postamble,
-	))
-	return splitTemplate.Execute(dst, p)
-}
+	postamble,
+))

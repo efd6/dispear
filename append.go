@@ -13,9 +13,9 @@ func APPEND(dst string, val any) *AppendProc {
 	p := &AppendProc{Field: dst, Value: &val}
 	p.recDecl()
 	p.Tag = "append_" + PathCleaner.Replace(dst)
+	p.template = appendTemplate
 	p.parent = p
 	ctx.Add(p)
-	ctx.tags[p.Tag] = append(ctx.tags[p.Tag], &p.shared)
 	return p
 }
 
@@ -44,14 +44,21 @@ func (p *AppendProc) MEDIA_TYPE(s string) *AppendProc {
 	return p
 }
 
-func (p *AppendProc) Render(dst io.Writer) error {
+func (p *AppendProc) Render(dst io.Writer, notag bool) error {
 	if p.Field == "" {
 		return fmt.Errorf("no dst for APPEND %s:%d: %s", p.file, p.line, p.Tag)
 	}
-	appendTemplate := template.Must(template.New("append").Funcs(templateHelpers).Parse(`
+	oldNotag := p.parent.SemanticsOnly
+	p.parent.SemanticsOnly = notag
+	err := p.template.Execute(dst, p)
+	p.parent.SemanticsOnly = oldNotag
+	return err
+}
+
+var appendTemplate = template.Must(template.New("append").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
 {{end}}- append:` +
-		preamble + `
+	preamble + `
     field: {{yaml_string .Field}}
 {{yaml 4 2 "value" .Value}}
 {{- with .MediaType}}
@@ -60,7 +67,5 @@ func (p *AppendProc) Render(dst io.Writer) error {
 {{- with .AllowDuplicates}}
     allow_duplicates: {{.}}
 {{- end -}}` +
-		postamble,
-	))
-	return appendTemplate.Execute(dst, p)
-}
+	postamble,
+))

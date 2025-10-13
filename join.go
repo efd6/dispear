@@ -20,9 +20,9 @@ func JOIN(dst, src, sep string) *JoinProc {
 	if dst != "" {
 		p.Tag += "_into_" + PathCleaner.Replace(dst)
 	}
+	p.template = joinTemplate
 	p.parent = p
 	ctx.Add(p)
-	ctx.tags[p.Tag] = append(ctx.tags[p.Tag], &p.shared)
 	return p
 }
 
@@ -34,23 +34,28 @@ type JoinProc struct {
 	TargetField *string
 }
 
-func (p *JoinProc) Render(dst io.Writer) error {
+func (p *JoinProc) Render(dst io.Writer, notag bool) error {
 	if p.Field == "" {
 		return fmt.Errorf("no src for JOIN %s:%d: %s", p.file, p.line, p.Tag)
 	}
 	if p.Separator == "" {
 		return fmt.Errorf("no separator for JOIN %s:%d: %s", p.file, p.line, p.Tag)
 	}
-	joinTemplate := template.Must(template.New("join").Funcs(templateHelpers).Parse(`
+	oldNotag := p.parent.SemanticsOnly
+	p.parent.SemanticsOnly = notag
+	err := p.template.Execute(dst, p)
+	p.parent.SemanticsOnly = oldNotag
+	return err
+}
+
+var joinTemplate = template.Must(template.New("join").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
 {{end}}- join:` +
-		preamble + `
+	preamble + `
     field: {{yaml_string .Field}}
     separator: {{yaml_string .Separator}}
 {{- with .TargetField}}
     target_field: {{yaml_string .}}
 {{- end -}}` +
-		postamble,
-	))
-	return joinTemplate.Execute(dst, p)
-}
+	postamble,
+))

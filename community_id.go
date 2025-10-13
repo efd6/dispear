@@ -19,9 +19,9 @@ func COMMUNITY_ID(dst string) *CommunityIDProc {
 	if dst != "" {
 		p.Tag += "_into_" + PathCleaner.Replace(dst)
 	}
+	p.template = communityIDTemplate
 	p.parent = p
 	ctx.Add(p)
-	ctx.tags[p.Tag] = append(ctx.tags[p.Tag], &p.shared)
 	return p
 }
 
@@ -121,11 +121,18 @@ func (p *CommunityIDProc) IGNORE_MISSING(t bool) *CommunityIDProc {
 	return p
 }
 
-func (p *CommunityIDProc) Render(dst io.Writer) error {
-	communityIDTemplate := template.Must(template.New("community_id").Funcs(templateHelpers).Parse(`
+func (p *CommunityIDProc) Render(dst io.Writer, notag bool) error {
+	oldNotag := p.parent.SemanticsOnly
+	p.parent.SemanticsOnly = notag
+	err := p.template.Execute(dst, p)
+	p.parent.SemanticsOnly = oldNotag
+	return err
+}
+
+var communityIDTemplate = template.Must(template.New("community_id").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
 {{end}}- community_id:` +
-		preamble + `
+	preamble + `
 {{- with .TargetField}}
     target_field: {{yaml_string .}}
 {{- end -}}
@@ -159,7 +166,5 @@ func (p *CommunityIDProc) Render(dst io.Writer) error {
 {{- with .IgnoreMissing}}
     ignore_missing: {{.}}
 {{- end -}}` +
-		postamble,
-	))
-	return communityIDTemplate.Execute(dst, p)
-}
+	postamble,
+))

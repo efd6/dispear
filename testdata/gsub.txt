@@ -20,7 +20,7 @@ func main() {
 description: gsub
 processors:
   - gsub:
-      tag: pairs
+      tag: pairs_dea12100
       field: src
       pattern: (..)*
       replacement: '(..) '

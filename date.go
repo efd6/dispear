@@ -20,9 +20,9 @@ func DATE(dst, src string, formats ...string) *DateProc {
 	if dst != "" {
 		p.Tag += "_into_" + PathCleaner.Replace(dst)
 	}
+	p.template = dateTemplate
 	p.parent = p
 	ctx.Add(p)
-	ctx.tags[p.Tag] = append(ctx.tags[p.Tag], &p.shared)
 	return p
 }
 
@@ -61,19 +61,27 @@ func (p *DateProc) TIMEZONE(s string) *DateProc {
 	return p
 }
 
-func (p *DateProc) Render(dst io.Writer) error {
+func (p *DateProc) Render(dst io.Writer, notag bool) error {
 	if p.Field == "" {
 		return fmt.Errorf("no src for DATE %s:%d: %s", p.file, p.line, p.Tag)
 	}
 	if len(p.Formats) == 0 {
 		return fmt.Errorf("no formats for DATE %s:%d: %s", p.file, p.line, p.Tag)
 	}
-	dateTemplate := template.Must(template.New("date").Funcs(templateHelpers).Parse(`
+	oldNotag := p.parent.SemanticsOnly
+	p.parent.SemanticsOnly = notag
+	err := p.template.Execute(dst, p)
+	p.parent.SemanticsOnly = oldNotag
+	return err
+}
+
+var dateTemplate = template.Must(template.New("date").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
 {{end}}- date:` +
-		preamble + `
+	preamble + `
     field: {{yaml_string .Field}}
-{{- with .TargetField}}    target_field: {{yaml_string .}}
+{{- with .TargetField}}
+    target_field: {{yaml_string .}}
 {{- end -}}
 {{- with .Formats}}
     formats:{{range .}}
@@ -88,7 +96,5 @@ func (p *DateProc) Render(dst io.Writer) error {
 {{- with .OutputFormat}}
     output_format: {{yaml_string .}}
 {{- end -}}` +
-		postamble,
-	))
-	return dateTemplate.Execute(dst, p)
-}
+	postamble,
+))

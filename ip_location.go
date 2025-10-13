@@ -21,9 +21,9 @@ func GEOIP(dst, src string) *IPLocationProc {
 	if dst != "" {
 		p.Tag += "_into_" + PathCleaner.Replace(dst)
 	}
+	p.template = ipLocationTemplate
 	p.parent = p
 	ctx.Add(p)
-	ctx.tags[p.Tag] = append(ctx.tags[p.Tag], &p.shared)
 	return p
 }
 
@@ -41,9 +41,9 @@ func IP_LOCATION(dst, src string) *IPLocationProc {
 	if dst != "" {
 		p.Tag += "_into_" + PathCleaner.Replace(dst)
 	}
+	p.template = ipLocationTemplate
 	p.parent = p
 	ctx.Add(p)
-	ctx.tags[p.Tag] = append(ctx.tags[p.Tag], &p.shared)
 	return p
 }
 
@@ -100,14 +100,21 @@ func (p *IPLocationProc) PROPERTIES(s ...string) *IPLocationProc {
 	return p
 }
 
-func (p *IPLocationProc) Render(dst io.Writer) error {
+func (p *IPLocationProc) Render(dst io.Writer, notag bool) error {
 	if p.Field == "" {
 		return fmt.Errorf("no src for %s %s:%d: %s", strings.ToUpper(p.Flavour), p.file, p.line, p.Tag)
 	}
-	ipLocationTemplate := template.Must(template.New(p.Flavour).Funcs(templateHelpers).Parse(`
+	oldNotag := p.parent.SemanticsOnly
+	p.parent.SemanticsOnly = notag
+	err := p.template.Execute(dst, p)
+	p.parent.SemanticsOnly = oldNotag
+	return err
+}
+
+var ipLocationTemplate = template.Must(template.New("ip_location").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
 {{end}}- {{.Flavour}}:` +
-		preamble + `
+	preamble + `
     field: {{yaml_string .Field}}
 {{- with .TargetField}}
     target_field: {{yaml_string .}}
@@ -128,7 +135,5 @@ func (p *IPLocationProc) Render(dst io.Writer) error {
 {{- with .IgnoreMissing}}
     ignore_missing: {{.}}
 {{- end -}}` +
-		postamble,
-	))
-	return ipLocationTemplate.Execute(dst, p)
-}
+	postamble,
+))

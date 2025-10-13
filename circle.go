@@ -25,9 +25,9 @@ func CIRCLE(dst, src, typ string, err float64) *CircleProc {
 	if dst != "" {
 		p.Tag += "_into_" + PathCleaner.Replace(dst)
 	}
+	p.template = circleTemplate
 	p.parent = p
 	ctx.Add(p)
-	ctx.tags[p.Tag] = append(ctx.tags[p.Tag], &p.shared)
 	return p
 }
 
@@ -49,14 +49,21 @@ func (p *CircleProc) IGNORE_MISSING(t bool) *CircleProc {
 	return p
 }
 
-func (p *CircleProc) Render(dst io.Writer) error {
+func (p *CircleProc) Render(dst io.Writer, notag bool) error {
 	if p.Field == "" {
 		return fmt.Errorf("no src for CIRCLE %s:%d: %s", p.file, p.line, p.Tag)
 	}
-	circleTemplate := template.Must(template.New("circle").Funcs(templateHelpers).Parse(`
+	oldNotag := p.parent.SemanticsOnly
+	p.parent.SemanticsOnly = notag
+	err := p.template.Execute(dst, p)
+	p.parent.SemanticsOnly = oldNotag
+	return err
+}
+
+var circleTemplate = template.Must(template.New("circle").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
 {{end}}- circle:` +
-		preamble + `
+	preamble + `
     field: {{yaml_string .Field}}
 {{- with .TargetField}}
     target_field: {{yaml_string .}}
@@ -67,7 +74,5 @@ func (p *CircleProc) Render(dst io.Writer) error {
 {{/**/}}
     shape_type: {{.ShapeType}}
     error_distance: {{.ErrorDistance}}` +
-		postamble,
-	))
-	return circleTemplate.Execute(dst, p)
-}
+	postamble,
+))

@@ -20,5 +20,5 @@ func main() {
 description: drop
 processors:
   - drop:
-      tag: drop_invalid_document
+      tag: drop_invalid_document_7a0fa595
       if: ctx.src == null

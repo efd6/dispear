@@ -20,7 +20,7 @@ func main() {
 description: kv
 processors:
   - kv:
-      tag: kv_src_into_dst
+      tag: kv_src_into_dst_1adbb80a
       field: src
       target_field: dst
       field_split: ','

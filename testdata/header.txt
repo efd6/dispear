@@ -42,10 +42,10 @@ processors:
 
 on_failure:
   - set:
-      tag: set_event_kind
+      tag: set_event_kind_fd943d0a
       field: event.kind
       value: error
   - append:
-      tag: append_error_message
+      tag: append_error_message_7c62982c
       field: error.message
       value: oops

@@ -20,5 +20,5 @@ func main() {
 description: community_id
 processors:
   - community_id:
-      tag: community_id
+      tag: community_id_cb617438
       seed: 1

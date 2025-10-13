@@ -20,7 +20,7 @@ func main() {
 description: date
 processors:
   - date:
-      tag: date_src
+      tag: date_src_b2922f9f
       field: src
       formats:
         - one

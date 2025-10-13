@@ -13,9 +13,9 @@ func SET(dst string) *SetProc {
 	p := &SetProc{Field: dst}
 	p.recDecl()
 	p.Tag = "set_" + PathCleaner.Replace(dst)
+	p.template = setTemplate
 	p.parent = p
 	ctx.Add(p)
-	ctx.tags[p.Tag] = append(ctx.tags[p.Tag], &p.shared)
 	return p
 }
 
@@ -70,17 +70,24 @@ func (p *SetProc) MEDIA_TYPE(s string) *SetProc {
 	return p
 }
 
-func (p *SetProc) Render(dst io.Writer) error {
+func (p *SetProc) Render(dst io.Writer, notag bool) error {
 	if p.Field == "" {
 		return fmt.Errorf("no dst for SET %s:%d: %s", p.file, p.line, p.Tag)
 	}
 	if (p.Value == nil) == (p.CopyFrom == nil) {
 		return fmt.Errorf("must have one of value or copy from for SET %s:%d: %s", p.file, p.line, p.Tag)
 	}
-	setTemplate := template.Must(template.New("set").Funcs(templateHelpers).Parse(`
+	oldNotag := p.parent.SemanticsOnly
+	p.parent.SemanticsOnly = notag
+	err := p.template.Execute(dst, p)
+	p.parent.SemanticsOnly = oldNotag
+	return err
+}
+
+var setTemplate = template.Must(template.New("set").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
 {{end}}- set:` +
-		preamble + `
+	preamble + `
     field: {{yaml_string .Field}}
 {{- with .Value}}
 {{yaml 4 2 "value" .}}
@@ -97,7 +104,5 @@ func (p *SetProc) Render(dst io.Writer) error {
 {{- with .IgnoreEmpty}}
     ignore_empty_value: {{.}}
 {{- end -}}` +
-		postamble,
-	))
-	return setTemplate.Execute(dst, p)
-}
+	postamble,
+))

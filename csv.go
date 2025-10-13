@@ -13,9 +13,9 @@ func CSV(dst, src string) *CSVProc {
 	p := &CSVProc{Field: src, TargetField: dst}
 	p.recDecl()
 	p.Tag = "csv_" + PathCleaner.Replace(src) + "_into_" + PathCleaner.Replace(dst)
+	p.template = csvTemplate
 	p.parent = p
 	ctx.Add(p)
-	ctx.tags[p.Tag] = append(ctx.tags[p.Tag], &p.shared)
 	return p
 }
 
@@ -71,17 +71,24 @@ func (p *CSVProc) IGNORE_MISSING(t bool) *CSVProc {
 	return p
 }
 
-func (p *CSVProc) Render(dst io.Writer) error {
+func (p *CSVProc) Render(dst io.Writer, notag bool) error {
 	if p.Field == "" {
 		return fmt.Errorf("no src for CSV %s:%d: %s", p.file, p.line, p.Tag)
 	}
 	if p.TargetField == "" {
 		return fmt.Errorf("no dst for CSV %s:%d: %s", p.file, p.line, p.Tag)
 	}
-	csvTemplate := template.Must(template.New("csv").Funcs(templateHelpers).Parse(`
+	oldNotag := p.parent.SemanticsOnly
+	p.parent.SemanticsOnly = notag
+	err := p.template.Execute(dst, p)
+	p.parent.SemanticsOnly = oldNotag
+	return err
+}
+
+var csvTemplate = template.Must(template.New("csv").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
 {{end}}- csv:` +
-		preamble + `
+	preamble + `
     field: {{yaml_string .Field}}
     target_field: {{yaml_string .TargetField}}
 {{- with .Quote}}
@@ -96,7 +103,5 @@ func (p *CSVProc) Render(dst io.Writer) error {
 {{- with .IgnoreMissing}}
     ignore_missing: {{.}}
 {{- end -}}` +
-		postamble,
-	))
-	return csvTemplate.Execute(dst, p)
-}
+	postamble,
+))

@@ -20,7 +20,7 @@ func main() {
 description: redact
 processors:
   - redact:
-      tag: redact_src_password
+      tag: redact_src_password_dc3b8c3a
       field: src.password
       patterns:
         - 'password:'

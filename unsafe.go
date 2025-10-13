@@ -2,6 +2,7 @@ package dispear
 
 import (
 	"bytes"
+	"encoding/json"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -45,4 +46,28 @@ func yamlValue(pre, in int, k string, v any) (string, error) {
 		return "", err
 	}
 	return indent(strings.TrimRight(buf.String(), "\n"), pre), nil
+}
+
+func (p *shared[P]) setSemantics() error {
+	var buf bytes.Buffer
+	p.SemanticsOnly = true
+	err := p.template.Execute(&buf, p.parent)
+	p.SemanticsOnly = false
+	if err != nil {
+		return err
+	}
+	var m []map[string]any
+	err = yaml.Unmarshal(buf.Bytes(), &m)
+	if err != nil {
+		return err
+	}
+	b, err := json.Marshal(m[0])
+	if err != nil {
+		return err
+	}
+	if p.semantic == nil {
+		p.semantic = &semantic{}
+	}
+	p.semantic.data = b
+	return nil
 }

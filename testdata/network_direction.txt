@@ -20,7 +20,7 @@ func main() {
 description: network_direction
 processors:
   - network_direction:
-      tag: network_direction_into_dst
+      tag: network_direction_into_dst_365007ec
       target_field: dst
       source_ip: src.ip
       destination_ip: dst.ip

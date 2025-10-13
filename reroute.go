@@ -36,9 +36,9 @@ func REROUTE(namespace, dataset, destination string) *RerouteProc {
 	if destination != "" {
 		p.Tag += "_to_" + PathCleaner.Replace(destination)
 	}
+	p.template = rerouteTemplate
 	p.parent = p
 	ctx.Add(p)
-	ctx.tags[p.Tag] = append(ctx.tags[p.Tag], &p.shared)
 	return p
 }
 
@@ -50,7 +50,7 @@ type RerouteProc struct {
 	Destination *string
 }
 
-func (p *RerouteProc) Render(dst io.Writer) error {
+func (p *RerouteProc) Render(dst io.Writer, notag bool) error {
 	if (p.Destination != nil) == (p.Namespace != nil || p.Dataset != nil) {
 		return fmt.Errorf("no destination provided with namespace or dataset for REROUTE %s:%d: %s", p.file, p.line, p.Tag)
 	}
@@ -60,10 +60,17 @@ func (p *RerouteProc) Render(dst io.Writer) error {
 	if !isValidRerouteName(p.Dataset) {
 		return fmt.Errorf("invalid dataset name for REROUTE %s:%d: %s", p.file, p.line, p.Tag)
 	}
-	rerouteTemplate := template.Must(template.New("reroute").Funcs(templateHelpers).Parse(`
+	oldNotag := p.parent.SemanticsOnly
+	p.parent.SemanticsOnly = notag
+	err := p.template.Execute(dst, p)
+	p.parent.SemanticsOnly = oldNotag
+	return err
+}
+
+var rerouteTemplate = template.Must(template.New("reroute").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
 {{end}}- reroute:` +
-		preamble + `
+	preamble + `
 {{- with .Namespace}}
     namespace: {{yaml_string .}}
 {{- end -}}
@@ -73,10 +80,8 @@ func (p *RerouteProc) Render(dst io.Writer) error {
 {{- with .Destination}}
     destination: {{yaml_string .}}
 {{- end -}}` +
-		postamble,
-	))
-	return rerouteTemplate.Execute(dst, p)
-}
+	postamble,
+))
 
 func isValidRerouteName(p *string) bool {
 	if p == nil {

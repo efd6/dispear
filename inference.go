@@ -21,9 +21,9 @@ func INFERENCE(dst, id string) *InferenceProc {
 	if dst != "" {
 		p.Tag += "_into_" + PathCleaner.Replace(dst)
 	}
+	p.template = inferenceTemplate
 	p.parent = p
 	ctx.Add(p)
-	ctx.tags[p.Tag] = append(ctx.tags[p.Tag], &p.shared)
 	return p
 }
 
@@ -82,17 +82,24 @@ func (p *InferenceProc) IGNORE_MISSING(t bool) *InferenceProc {
 	return p
 }
 
-func (p *InferenceProc) Render(dst io.Writer) error {
+func (p *InferenceProc) Render(dst io.Writer, notag bool) error {
 	if p.ModelID == "" {
 		return fmt.Errorf("no model ID for INFERENCE %s:%d: %s", p.file, p.line, p.Tag)
 	}
 	if p.InputOutput != nil && (p.TargetField != nil || p.FieldMapping != nil) {
 		return fmt.Errorf("using input_output with target_field/field_map for INFERENCE %s:%d: %s", p.file, p.line, p.Tag)
 	}
-	htmlStripTemplate := template.Must(template.New("inference").Funcs(templateHelpers).Parse(`
+	oldNotag := p.parent.SemanticsOnly
+	p.parent.SemanticsOnly = notag
+	err := p.template.Execute(dst, p)
+	p.parent.SemanticsOnly = oldNotag
+	return err
+}
+
+var inferenceTemplate = template.Must(template.New("inference").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
 {{end}}- inference:` +
-		preamble + `
+	preamble + `
     model_id: {{yaml_string .ModelID}}
 {{- with .TargetField}}
     target_field: {{yaml_string .}}
@@ -112,7 +119,5 @@ func (p *InferenceProc) Render(dst io.Writer) error {
 {{- with .IgnoreMissing}}
     ignore_missing: {{.}}
 {{- end -}}` +
-		postamble,
-	))
-	return htmlStripTemplate.Execute(dst, p)
-}
+	postamble,
+))

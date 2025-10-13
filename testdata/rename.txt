@@ -20,6 +20,6 @@ func main() {
 description: rename
 processors:
   - rename:
-      tag: rename_old_to_new
+      tag: rename_old_to_new_1c0a2c60
       field: old
       target_field: new

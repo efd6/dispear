@@ -20,7 +20,7 @@ func main() {
 description: user_agent
 processors:
   - user_agent:
-      tag: user_agent_src_into_dst
+      tag: user_agent_src_into_dst_d3eef382
       field: src
       target_field: dst
       ignore_failure: true

@@ -13,9 +13,9 @@ func FAIL(message string) *FailProc {
 	p := &FailProc{Message: message}
 	p.recDecl()
 	p.Tag = "fail"
+	p.template = failTemplate
 	p.parent = p
 	ctx.Add(p)
-	ctx.tags[p.Tag] = append(ctx.tags[p.Tag], &p.shared)
 	return p
 }
 
@@ -25,16 +25,21 @@ type FailProc struct {
 	Message string
 }
 
-func (p *FailProc) Render(dst io.Writer) error {
+func (p *FailProc) Render(dst io.Writer, notag bool) error {
 	if p.Message == "" {
 		return fmt.Errorf("no message for FAIL: %s", p.Tag)
 	}
-	failTemplate := template.Must(template.New("fail").Funcs(templateHelpers).Parse(`
+	oldNotag := p.parent.SemanticsOnly
+	p.parent.SemanticsOnly = notag
+	err := p.template.Execute(dst, p)
+	p.parent.SemanticsOnly = oldNotag
+	return err
+}
+
+var failTemplate = template.Must(template.New("fail").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
 {{end}}- fail:` +
-		preamble + `
+	preamble + `
     message: {{yaml_string .Message}}` +
-		postamble,
-	))
-	return failTemplate.Execute(dst, p)
-}
+	postamble,
+))

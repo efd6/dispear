@@ -41,42 +41,42 @@ func main() {
 description: set
 processors:
   - set:
-      tag: set_field_to_set_01
+      tag: set_field_to_set_4516dee2
       field: field.to.set
       copy_from: src.field
       ignore_empty_value: true
   - set:
-      tag: set_field_to_set_02
+      tag: set_field_to_set_5306be01
       field: field.to.set
       value: value
       override: false
   - set:
-      tag: set_field_to_set_03
+      tag: set_field_to_set_0a31392c
       field: field.to.set
       value: '{{{other.field}}}'
       override: false
   - set:
-      tag: set_field_to_set_04
+      tag: set_field_to_set_f037cf65
       field: field.to.set
       value: 1
       override: false
   - set:
-      tag: set_field_to_set_05
+      tag: set_field_to_set_b347fb14
       field: field.to.set
       value: 1.5
       override: false
   - set:
-      tag: set_field_to_set_06
+      tag: set_field_to_set_8021ae26
       field: field.to.set
       value: true
       override: false
   - set:
-      tag: set_field_to_set_07
+      tag: set_field_to_set_0489c955
       field: field.to.set
       value: false
       override: false
   - set:
-      tag: set_field_to_set_08
+      tag: set_field_to_set_486e9173
       field: field.to.set
       value:
         - 1
@@ -85,17 +85,17 @@ processors:
         - 4
       override: true
   - set:
-      tag: set_field_to_set_09
+      tag: set_field_to_set_954740a1
       if: ctx.field != null && (ctx.field != 0 || ctx.field != '')
       field: field.to.set
       value: false
   - set:
-      tag: set_field_to_set_10
+      tag: set_field_to_set_92473be8
       if: ctx.field != null && (ctx.field != 0 || ctx.field != '')
       field: field.to.set
       value: false
   - set:
-      tag: set_field_to_set_11
+      tag: set_field_to_set_ff910fa7
       if: |-
         ctx.field != null && (
           ctx.field != 0 ||
@@ -104,7 +104,7 @@ processors:
       field: field.to.set
       value: false
   - set:
-      tag: set_field_to_set_12
+      tag: set_field_to_set_0091113a
       if: |-
         ctx.field != null && (
           ctx.field != 0 ||

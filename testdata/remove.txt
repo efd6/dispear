@@ -22,12 +22,12 @@ func main() {
 description: remove
 processors:
   - remove:
-      tag: remove_1
+      tag: remove_bf50c7f6
       field:
         - field1
         - field2
   - remove:
-      tag: remove_2
+      tag: remove_7c823e46
       field:
         - field1
         - field2
@@ -35,7 +35,7 @@ processors:
         - field3
         - field4
   - remove:
-      tag: remove_3
+      tag: remove_ca1f9acb
       keep:
         - field3
         - field4

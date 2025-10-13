@@ -20,6 +20,6 @@ func main() {
 description: lowercase
 processors:
   - lowercase:
-      tag: lowercase_src_into_dst
+      tag: lowercase_src_into_dst_9c957f69
       field: src
       target_field: dst

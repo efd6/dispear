@@ -20,6 +20,6 @@ func main() {
 description: url_decode
 processors:
   - urldecode:
-      tag: urldecode_src_into_url
+      tag: urldecode_src_into_url_f1cf3e0d
       field: src
       target_field: url

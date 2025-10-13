@@ -22,14 +22,14 @@ func main() {
 description: sort
 processors:
   - sort:
-      tag: sort_src
+      tag: sort_src_3c3e6b69
       field: src
   - sort:
-      tag: sort_src_asc
+      tag: sort_src_asc_0b04d1e0
       field: src
       order: asc
   - sort:
-      tag: sort_src_into_dst_asc
+      tag: sort_src_into_dst_asc_8cdf9f55
       field: src
       target_field: dst
       order: asc

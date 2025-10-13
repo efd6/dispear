@@ -26,9 +26,9 @@ func SORT(dst, src, order string) *SortProc {
 	if order != "" {
 		p.Tag += "_" + PathCleaner.Replace(order)
 	}
+	p.template = sortTemplate
 	p.parent = p
 	ctx.Add(p)
-	ctx.tags[p.Tag] = append(ctx.tags[p.Tag], &p.shared)
 	return p
 }
 
@@ -40,14 +40,21 @@ type SortProc struct {
 	Order       *string
 }
 
-func (p *SortProc) Render(dst io.Writer) error {
+func (p *SortProc) Render(dst io.Writer, notag bool) error {
 	if p.Field == "" {
 		return fmt.Errorf("no src for SORT %s:%d: %s", p.file, p.line, p.Tag)
 	}
-	sortTemplate := template.Must(template.New("sort").Funcs(templateHelpers).Parse(`
+	oldNotag := p.parent.SemanticsOnly
+	p.parent.SemanticsOnly = notag
+	err := p.template.Execute(dst, p)
+	p.parent.SemanticsOnly = oldNotag
+	return err
+}
+
+var sortTemplate = template.Must(template.New("sort").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
 {{end}}- sort:` +
-		preamble + `
+	preamble + `
     field: {{yaml_string .Field}}
 {{- with .TargetField}}
     target_field: {{yaml_string .}}
@@ -55,7 +62,5 @@ func (p *SortProc) Render(dst io.Writer) error {
 {{- with .Order}}
     order: {{yaml_string .}}
 {{- end -}}` +
-		postamble,
-	))
-	return sortTemplate.Execute(dst, p)
-}
+	postamble,
+))

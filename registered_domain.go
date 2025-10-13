@@ -20,9 +20,9 @@ func REGISTERED_DOMAIN(dst, src string) *RegisteredDomainProc {
 	if dst != "" {
 		p.Tag += "_into_" + PathCleaner.Replace(dst)
 	}
+	p.template = registeredDomainTemplate
 	p.parent = p
 	ctx.Add(p)
-	ctx.tags[p.Tag] = append(ctx.tags[p.Tag], &p.shared)
 	return p
 }
 
@@ -42,14 +42,21 @@ func (p *RegisteredDomainProc) IGNORE_MISSING(t bool) *RegisteredDomainProc {
 	return p
 }
 
-func (p *RegisteredDomainProc) Render(dst io.Writer) error {
+func (p *RegisteredDomainProc) Render(dst io.Writer, notag bool) error {
 	if p.Field == "" {
 		return fmt.Errorf("no src for REGISTERED_DOMAIN %s:%d: %s", p.file, p.line, p.Tag)
 	}
-	registeredDomainTemplate := template.Must(template.New("registered_domain").Funcs(templateHelpers).Parse(`
+	oldNotag := p.parent.SemanticsOnly
+	p.parent.SemanticsOnly = notag
+	err := p.template.Execute(dst, p)
+	p.parent.SemanticsOnly = oldNotag
+	return err
+}
+
+var registeredDomainTemplate = template.Must(template.New("registered_domain").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
 {{end}}- registered_domain:` +
-		preamble + `
+	preamble + `
     field: {{yaml_string .Field}}
 {{- with .TargetField}}
     target_field: {{yaml_string .}}
@@ -57,7 +64,5 @@ func (p *RegisteredDomainProc) Render(dst io.Writer) error {
 {{- with .IgnoreMissing}}
     ignore_missing: {{.}}
 {{- end -}}` +
-		postamble,
-	))
-	return registeredDomainTemplate.Execute(dst, p)
-}
+	postamble,
+))

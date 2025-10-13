@@ -20,7 +20,7 @@ func main() {
 description: fingerprint
 processors:
   - fingerprint:
-      tag: fingerprint_into__id
+      tag: fingerprint_into__id_5498ba4e
       fields:
         - src1
         - src2

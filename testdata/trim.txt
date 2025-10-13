@@ -20,6 +20,6 @@ func main() {
 description: trim
 processors:
   - trim:
-      tag: trim_src_into_dst
+      tag: trim_src_into_dst_157fd136
       field: src
       target_field: dst

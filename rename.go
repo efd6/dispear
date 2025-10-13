@@ -13,9 +13,9 @@ func RENAME(from, to string) *RenameProc {
 	p := &RenameProc{Field: from, TargetField: to}
 	p.recDecl()
 	p.Tag = "rename_" + PathCleaner.Replace(from) + "_to_" + PathCleaner.Replace(to)
+	p.template = renameTemplate
 	p.parent = p
 	ctx.Add(p)
-	ctx.tags[p.Tag] = append(ctx.tags[p.Tag], &p.shared)
 	return p
 }
 
@@ -44,17 +44,24 @@ func (p *RenameProc) OVERRIDE(t bool) *RenameProc {
 	return p
 }
 
-func (p *RenameProc) Render(dst io.Writer) error {
+func (p *RenameProc) Render(dst io.Writer, notag bool) error {
 	if p.Field == "" {
 		return fmt.Errorf("no from name for RENAME %s:%d: %s", p.file, p.line, p.Tag)
 	}
 	if p.TargetField == "" {
 		return fmt.Errorf("no to name for RENAME %s:%d: %s", p.file, p.line, p.Tag)
 	}
-	renameTemplate := template.Must(template.New("rename").Funcs(templateHelpers).Parse(`
+	oldNotag := p.parent.SemanticsOnly
+	p.parent.SemanticsOnly = notag
+	err := p.template.Execute(dst, p)
+	p.parent.SemanticsOnly = oldNotag
+	return err
+}
+
+var renameTemplate = template.Must(template.New("rename").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
 {{end}}- rename:` +
-		preamble + `
+	preamble + `
     field: {{yaml_string .Field}}
     target_field: {{yaml_string .TargetField}}
 {{- with .Override}}
@@ -63,7 +70,5 @@ func (p *RenameProc) Render(dst io.Writer) error {
 {{- with .IgnoreMissing}}
     ignore_missing: {{.}}
 {{- end -}}` +
-		postamble,
-	))
-	return renameTemplate.Execute(dst, p)
-}
+	postamble,
+))

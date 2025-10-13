@@ -39,7 +39,7 @@ func main() {
 description: script
 processors:
   - script:
-      tag: script
+      tag: script_4d0fd249
       params:
         values:
           one: 1

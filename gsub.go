@@ -20,9 +20,9 @@ func GSUB(dst, src, match, replace string) *GsubProc {
 	if dst != "" {
 		p.Tag += "_into_" + PathCleaner.Replace(dst)
 	}
+	p.template = gsubTemplate
 	p.parent = p
 	ctx.Add(p)
-	ctx.tags[p.Tag] = append(ctx.tags[p.Tag], &p.shared)
 	return p
 }
 
@@ -44,14 +44,21 @@ func (p *GsubProc) IGNORE_MISSING(t bool) *GsubProc {
 	return p
 }
 
-func (p *GsubProc) Render(dst io.Writer) error {
+func (p *GsubProc) Render(dst io.Writer, notag bool) error {
 	if p.Field == "" {
 		return fmt.Errorf("no src for GSUB %s:%d: %s", p.file, p.line, p.Tag)
 	}
-	gsubTemplate := template.Must(template.New("gsub").Funcs(templateHelpers).Parse(`
+	oldNotag := p.parent.SemanticsOnly
+	p.parent.SemanticsOnly = notag
+	err := p.template.Execute(dst, p)
+	p.parent.SemanticsOnly = oldNotag
+	return err
+}
+
+var gsubTemplate = template.Must(template.New("gsub").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
 {{end}}- gsub:` +
-		preamble + `
+	preamble + `
     field: {{yaml_string .Field}}
 {{- with .TargetField}}
     target_field: {{yaml_string .}}
@@ -65,7 +72,5 @@ func (p *GsubProc) Render(dst io.Writer) error {
 {{- with .IgnoreMissing}}
     ignore_missing: {{.}}
 {{- end -}}` +
-		postamble,
-	))
-	return gsubTemplate.Execute(dst, p)
-}
+	postamble,
+))

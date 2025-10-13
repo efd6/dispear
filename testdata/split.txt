@@ -23,20 +23,20 @@ func main() {
 description: split
 processors:
   - split:
-      tag: split_src_1
+      tag: split_src_283275cd
       field: src
       separator: /
   - split:
-      tag: split_src_into_dst_1
+      tag: split_src_into_dst_c10d1bb2
       field: src
       separator: /
       target_field: dst
   - split:
-      tag: split_src_2
+      tag: split_src_e38dd0b0
       field: src
       separator: ':'
   - split:
-      tag: split_src_into_dst_2
+      tag: split_src_into_dst_a08379e5
       field: src
       separator: ':'
       target_field: dst

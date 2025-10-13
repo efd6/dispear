@@ -21,37 +21,37 @@
     expands to
     ```
       - set:
-          tag: set_cloud_account_id_1
+          tag: set_cloud_account_id_e6db5c48
           field: cloud.account.id
           copy_from: ds.cloud.account.uid
           ignore_empty_value: true
       - set:
-          tag: set_cloud_account_id_2
+          tag: set_cloud_account_id_e9db6101
           field: cloud.account.id
           copy_from: ds.cloud.account.uid
           ignore_empty_value: true
       - set:
-          tag: set_cloud_account_name
+          tag: set_cloud_account_name_7cbf5d86
           field: cloud.account.name
           copy_from: ds.cloud.account.name
           ignore_empty_value: true
       - set:
-          tag: set_cloud_availability_zone
+          tag: set_cloud_availability_zone_cd9a4716
           field: cloud.availability_zone
           copy_from: ds.cloud.zone
           ignore_empty_value: true
       - set:
-          tag: set_cloud_project_id
+          tag: set_cloud_project_id_c5fc8830
           field: cloud.project.id
           copy_from: ds.cloud.project_uid
           ignore_empty_value: true
       - set:
-          tag: set_cloud_provider
+          tag: set_cloud_provider_fe8fc7c8
           field: cloud.provider
           copy_from: ds.cloud.provider
           ignore_empty_value: true
       - set:
-          tag: set_cloud_region
+          tag: set_cloud_region_c83b7602
           field: cloud.region
           copy_from: ds.cloud.region
           ignore_empty_value: true

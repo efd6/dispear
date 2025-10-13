@@ -20,9 +20,9 @@ func TRIM(dst, src string) *TrimProc {
 	if dst != "" {
 		p.Tag += "_into_" + PathCleaner.Replace(dst)
 	}
+	p.template = trimTemplate
 	p.parent = p
 	ctx.Add(p)
-	ctx.tags[p.Tag] = append(ctx.tags[p.Tag], &p.shared)
 	return p
 }
 
@@ -42,14 +42,21 @@ func (p *TrimProc) IGNORE_MISSING(t bool) *TrimProc {
 	return p
 }
 
-func (p *TrimProc) Render(dst io.Writer) error {
+func (p *TrimProc) Render(dst io.Writer, notag bool) error {
 	if p.Field == "" {
 		return fmt.Errorf("no src for TRIM %s:%d: %s", p.file, p.line, p.Tag)
 	}
-	trimTemplate := template.Must(template.New("trim").Funcs(templateHelpers).Parse(`
+	oldNotag := p.parent.SemanticsOnly
+	p.parent.SemanticsOnly = notag
+	err := p.template.Execute(dst, p)
+	p.parent.SemanticsOnly = oldNotag
+	return err
+}
+
+var trimTemplate = template.Must(template.New("trim").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
 {{end}}- trim:` +
-		preamble + `
+	preamble + `
     field: {{yaml_string .Field}}
 {{- with .TargetField}}
     target_field: {{yaml_string .}}
@@ -57,7 +64,5 @@ func (p *TrimProc) Render(dst io.Writer) error {
 {{- with .IgnoreMissing}}
     ignore_missing: {{.}}
 {{- end -}}` +
-		postamble,
-	))
-	return trimTemplate.Execute(dst, p)
-}
+	postamble,
+))

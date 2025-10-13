@@ -20,7 +20,7 @@ func main() {
 description: ip_location
 processors:
   - ip_location:
-      tag: ip_location_ip_into_geo
+      tag: ip_location_ip_into_geo_bca05132
       field: ip
       target_field: geo
       database_file: GeoLite2-Country.mmdb

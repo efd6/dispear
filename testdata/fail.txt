@@ -20,7 +20,7 @@ func main() {
 description: fail
 processors:
   - fail:
-      tag: fail
+      tag: fail_7a842d45
       if: ctx.src == null
       message: '! did not succeed'
       ignore_failure: true

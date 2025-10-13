@@ -23,9 +23,9 @@ func CONVERT(dst, src, typ string) *ConvertProc {
 	if dst != "" {
 		p.Tag += "_into_" + PathCleaner.Replace(dst)
 	}
+	p.template = convertTemplate
 	p.parent = p
 	ctx.Add(p)
-	ctx.tags[p.Tag] = append(ctx.tags[p.Tag], &p.shared)
 	return p
 }
 
@@ -46,17 +46,24 @@ func (p *ConvertProc) IGNORE_MISSING(t bool) *ConvertProc {
 	return p
 }
 
-func (p *ConvertProc) Render(dst io.Writer) error {
+func (p *ConvertProc) Render(dst io.Writer, notag bool) error {
 	if p.Field == "" {
 		return fmt.Errorf("no src for CONVERT %s:%d: %s", p.file, p.line, p.Tag)
 	}
 	if p.Type == "" {
 		return fmt.Errorf("no type for CONVERT %s:%d: %s", p.file, p.line, p.Tag)
 	}
-	convertTemplate := template.Must(template.New("convert").Funcs(templateHelpers).Parse(`
+	oldNotag := p.parent.SemanticsOnly
+	p.parent.SemanticsOnly = notag
+	err := p.template.Execute(dst, p)
+	p.parent.SemanticsOnly = oldNotag
+	return err
+}
+
+var convertTemplate = template.Must(template.New("convert").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
 {{end}}- convert:` +
-		preamble + `
+	preamble + `
     field: {{yaml_string .Field}}
     type: {{yaml_string .Type}}
 {{- with .TargetField}}
@@ -65,7 +72,5 @@ func (p *ConvertProc) Render(dst io.Writer) error {
 {{- with .IgnoreMissing}}
     ignore_missing: {{.}}
 {{- end -}}` +
-		postamble,
-	))
-	return convertTemplate.Execute(dst, p)
-}
+	postamble,
+))

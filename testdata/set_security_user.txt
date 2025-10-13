@@ -20,7 +20,7 @@ func main() {
 description: set_security_user
 processors:
   - set_security_user:
-      tag: set_security_user_to_user_field
+      tag: set_security_user_to_user_field_78094584
       field: user.field
       properties:
         - one

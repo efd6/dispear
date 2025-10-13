@@ -18,9 +18,9 @@ func KV(dst, src, fieldsplit, valuesplit string) *KVProc {
 	if dst != "" {
 		p.Tag += "_into_" + PathCleaner.Replace(dst)
 	}
+	p.template = kvTemplate
 	p.parent = p
 	ctx.Add(p)
-	ctx.tags[p.Tag] = append(ctx.tags[p.Tag], &p.shared)
 	return p
 }
 
@@ -96,7 +96,7 @@ func (p *KVProc) TRIM_VALUE(t bool) *KVProc {
 	return p
 }
 
-func (p *KVProc) Render(dst io.Writer) error {
+func (p *KVProc) Render(dst io.Writer, notag bool) error {
 	if p.Field == "" {
 		return fmt.Errorf("no src for KV %s:%d: %s", p.file, p.line, p.Tag)
 	}
@@ -106,10 +106,17 @@ func (p *KVProc) Render(dst io.Writer) error {
 	if p.ValueSplit == "" {
 		return fmt.Errorf("no value split for KV %s:%d: %s", p.file, p.line, p.Tag)
 	}
-	kvTemplate := template.Must(template.New("kv").Funcs(templateHelpers).Parse(`
+	oldNotag := p.parent.SemanticsOnly
+	p.parent.SemanticsOnly = notag
+	err := p.template.Execute(dst, p)
+	p.parent.SemanticsOnly = oldNotag
+	return err
+}
+
+var kvTemplate = template.Must(template.New("kv").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
 {{end}}- kv:` +
-		preamble + `
+	preamble + `
     field: {{yaml_string .Field}}
 {{- with .TargetField}}
     target_field: {{yaml_string .}}
@@ -141,7 +148,5 @@ func (p *KVProc) Render(dst io.Writer) error {
 {{- with .IgnoreMissing}}
     ignore_missing: {{.}}
 {{- end -}}` +
-		postamble,
-	))
-	return kvTemplate.Execute(dst, p)
-}
+	postamble,
+))

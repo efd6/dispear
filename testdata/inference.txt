@@ -39,7 +39,7 @@ func main() {
 description: inference
 processors:
   - inference:
-      tag: inference_id
+      tag: inference_id_560d578a
       model_id: id
       input_output:
         - input_field: in1
@@ -52,7 +52,7 @@ processors:
           results_field: prediction
           top_classes_results_field: probabilities
   - inference:
-      tag: inference_id_into_dst
+      tag: inference_id_into_dst_c2f72ba0
       model_id: id
       target_field: dst
       field_map:

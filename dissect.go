@@ -13,9 +13,9 @@ func DISSECT(src, pattern string) *DissectProc {
 	p := &DissectProc{Field: src, Pattern: pattern}
 	p.recDecl()
 	p.Tag = "dissect_" + PathCleaner.Replace(src)
+	p.template = dissectTemplate
 	p.parent = p
 	ctx.Add(p)
-	ctx.tags[p.Tag] = append(ctx.tags[p.Tag], &p.shared)
 	return p
 }
 
@@ -44,17 +44,24 @@ func (p *DissectProc) IGNORE_MISSING(t bool) *DissectProc {
 	return p
 }
 
-func (p *DissectProc) Render(dst io.Writer) error {
+func (p *DissectProc) Render(dst io.Writer, notag bool) error {
 	if p.Field == "" {
 		return fmt.Errorf("no src for ATTACHMENT %s:%d: %s", p.file, p.line, p.Tag)
 	}
 	if p.Pattern == "" {
 		return fmt.Errorf("no pattern for DISSECT %s:%d: %s", p.file, p.line, p.Tag)
 	}
-	dissectTemplate := template.Must(template.New("dissect").Funcs(templateHelpers).Parse(`
+	oldNotag := p.parent.SemanticsOnly
+	p.parent.SemanticsOnly = notag
+	err := p.template.Execute(dst, p)
+	p.parent.SemanticsOnly = oldNotag
+	return err
+}
+
+var dissectTemplate = template.Must(template.New("dissect").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
 {{end}}- dissect:` +
-		preamble + `
+	preamble + `
     field: {{yaml_string .Field}}
     pattern: {{yaml_string .Pattern}}
 {{- with .AppendSeparator}}
@@ -63,7 +70,5 @@ func (p *DissectProc) Render(dst io.Writer) error {
 {{- with .IgnoreMissing}}
     ignore_missing: {{.}}
 {{- end -}}` +
-		postamble,
-	))
-	return dissectTemplate.Execute(dst, p)
-}
+	postamble,
+))

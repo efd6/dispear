@@ -20,7 +20,7 @@ func main() {
 description: geo_grid
 processors:
   - geo_grid:
-      tag: geo_grid_src_as_typ
+      tag: geo_grid_src_as_typ_3191a8a3
       field: src
       tile_type: typ
       children_field: child

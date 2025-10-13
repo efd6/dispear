@@ -20,6 +20,6 @@ func main() {
 description: uri_parts
 processors:
   - uri_parts:
-      tag: uri_parts_src_into_url
+      tag: uri_parts_src_into_url_934f1b6d
       field: src
       target_field: url

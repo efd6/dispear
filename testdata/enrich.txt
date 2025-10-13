@@ -20,7 +20,7 @@ func main() {
 description: enrich
 processors:
   - enrich:
-      tag: enrich_src_into_dst
+      tag: enrich_src_into_dst_574eb5ce
       field: src
       target_field: dst
       max_matches: 10

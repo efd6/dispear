@@ -20,7 +20,7 @@ func main() {
 description: circle
 processors:
   - circle:
-      tag: circle_src_poly_into_bound
+      tag: circle_src_poly_into_bound_f8ab3b82
       field: src.poly
       target_field: bound
       ignore_missing: true

@@ -21,11 +21,11 @@ func main() {
 description: join
 processors:
   - join:
-      tag: join_ip_into_geo
+      tag: join_ip_into_geo_54a83e8f
       field: ip
       separator: '-'
       target_field: geo
   - join:
-      tag: join_ip
+      tag: join_ip_2520e930
       field: ip
       separator: '-'

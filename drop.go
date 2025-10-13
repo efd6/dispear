@@ -15,9 +15,9 @@ func DROP(reason string) *StopProc {
 	if reason != "" {
 		p.Tag += "_" + PathCleaner.Replace(reason)
 	}
+	p.template = dropTemplate
 	p.parent = p
 	ctx.Add(p)
-	ctx.tags[p.Tag] = append(ctx.tags[p.Tag], &p.shared)
 	return p
 }
 
@@ -31,9 +31,9 @@ func TERMINATE(reason string) *StopProc {
 	if reason != "" {
 		p.Tag += "_" + PathCleaner.Replace(reason)
 	}
+	p.template = dropTemplate
 	p.parent = p
 	ctx.Add(p)
-	ctx.tags[p.Tag] = append(ctx.tags[p.Tag], &p.shared)
 	return p
 }
 
@@ -43,12 +43,17 @@ type StopProc struct {
 	Flavour string
 }
 
-func (p *StopProc) Render(dst io.Writer) error {
-	dropTemplate := template.Must(template.New("drop").Funcs(templateHelpers).Parse(`
+func (p *StopProc) Render(dst io.Writer, notag bool) error {
+	oldNotag := p.parent.SemanticsOnly
+	p.parent.SemanticsOnly = notag
+	err := p.template.Execute(dst, p)
+	p.parent.SemanticsOnly = oldNotag
+	return err
+}
+
+var dropTemplate = template.Must(template.New("drop").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
 {{end}}- {{.Flavour}}:` +
-		preamble +
-		postamble,
-	))
-	return dropTemplate.Execute(dst, p)
-}
+	preamble +
+	postamble,
+))

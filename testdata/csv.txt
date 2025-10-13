@@ -20,7 +20,7 @@ func main() {
 description: csv
 processors:
   - csv:
-      tag: csv_src_field_into_dst
+      tag: csv_src_field_into_dst_dc42d800
       field: src.field
       target_field: dst
       quote: '"'

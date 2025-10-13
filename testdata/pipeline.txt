@@ -20,6 +20,6 @@ func main() {
 description: pipeline
 processors:
   - pipeline:
-      tag: pipeline_other-pipeline
+      tag: pipeline_other-pipeline_5b4cac3b
       name: '{{ IngestPipeline "other-pipeline" }}'
       ignore_missing_pipeline: true

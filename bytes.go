@@ -20,9 +20,9 @@ func BYTES(dst, src string) *BytesProc {
 	if dst != "" {
 		p.Tag += "_into_" + PathCleaner.Replace(dst)
 	}
+	p.template = bytesTemplate
 	p.parent = p
 	ctx.Add(p)
-	ctx.tags[p.Tag] = append(ctx.tags[p.Tag], &p.shared)
 	return p
 }
 
@@ -42,14 +42,21 @@ func (p *BytesProc) IGNORE_MISSING(t bool) *BytesProc {
 	return p
 }
 
-func (p *BytesProc) Render(dst io.Writer) error {
+func (p *BytesProc) Render(dst io.Writer, notag bool) error {
 	if p.Field == "" {
 		return fmt.Errorf("no src for BYTES %s:%d: %s", p.file, p.line, p.Tag)
 	}
-	bytesTemplate := template.Must(template.New("bytes").Funcs(templateHelpers).Parse(`
+	oldNotag := p.parent.SemanticsOnly
+	p.parent.SemanticsOnly = notag
+	err := p.template.Execute(dst, p)
+	p.parent.SemanticsOnly = oldNotag
+	return err
+}
+
+var bytesTemplate = template.Must(template.New("bytes").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
 {{end}}- bytes:` +
-		preamble + `
+	preamble + `
     field: {{yaml_string .Field}}
 {{- with .TargetField}}
     target_field: {{yaml_string .}}
@@ -57,7 +64,5 @@ func (p *BytesProc) Render(dst io.Writer) error {
 {{- with .IgnoreMissing}}
     ignore_missing: {{.}}
 {{- end -}}` +
-		postamble,
-	))
-	return bytesTemplate.Execute(dst, p)
-}
+	postamble,
+))

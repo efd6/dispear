@@ -20,6 +20,6 @@ func main() {
 description: dot_expander
 processors:
   - dot_expander:
-      tag: dot_expander_from_src
+      tag: dot_expander_from_src_d4a85027
       field: src
       path: '*'

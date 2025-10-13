@@ -1020,27 +1020,27 @@ processors:
   # Base Event docs: https://schema.ocsf.io/1.1.0/base_event?extensions=
 
   - set:
-      tag: set_ecs_version
+      tag: set_ecs_version_0f7334bb
       field: ecs.version
       value: 8.11.0
   - rename:
-      tag: rename_message_to_event_original
+      tag: rename_message_to_event_original_56a77271
       if: ctx.event?.original == null
       field: message
       target_field: event.original
       ignore_missing: true
   - json:
-      tag: json_event_original_into_ocsf
+      tag: json_event_original_into_ocsf_c1a2cfd6
       field: event.original
       target_field: ocsf
       on_failure:
         - append:
-            tag: append_error_message_01
+            tag: append_error_message_fcfec416
             field: error.message
             value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
   - script:
       description: Recursively traverses the ocsf object to convert suspected timestamps to milliseconds.
-      tag: convert_timestamps_to_milliseconds
+      tag: convert_timestamps_to_milliseconds_2e0aead6
       source: |-
         def convertToMilliseconds(long timestamp) {
             if ((long)1e19 - 1 < timestamp) {
@@ -1076,210 +1076,210 @@ processors:
         processFields(ctx.ocsf);
       on_failure:
         - append:
-            tag: append_error_message_02
+            tag: append_error_message_24b61516
             field: error.message
             value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
   - rename:
-      tag: rename_resource_to_resources
+      tag: rename_resource_to_resources_efd2dce3
       if: ctx.ocsf?.resources == null
       field: resource
       target_field: resources
       ignore_missing: true
   - rename:
-      tag: rename_finding_info_list_to_finding_info
+      tag: rename_finding_info_list_to_finding_info_7768cf52
       if: ctx.ocsf?.finding_info == null
       field: finding_info_list
       target_field: finding_info
       ignore_missing: true
   - convert:
-      tag: convert_ocsf_class_uid_to_string
+      tag: convert_ocsf_class_uid_to_string_8dea8532
       field: ocsf.class_uid
       type: string
       ignore_missing: true
 
   # Set event.kind based on ocsf.class_uid.
   - set:
-      tag: set_event_kind_1
+      tag: set_event_kind_6873bb9a
       if: ctx.ocsf?.class_uid != null && ['1001','1002','1003','1004','1005','1006','1007','3001','3002','3003','3005','3006','4001','4002','4003','4004','4005','4006','4007','4008','4009','4010','4011','4012','4013','5001','5002','5003','5004','5019','6001','6002','6003','6004','6005','6006','6007'].contains(ctx.ocsf.class_uid)
       field: event.kind
       value: event
   - set:
-      tag: set_event_kind_2
+      tag: set_event_kind_b1d28aae
       if: ctx.ocsf?.class_uid != null && ['2001','2002','2003','2004','2005'].contains(ctx.ocsf.class_uid)
       field: event.kind
       value: alert
 
   # Set event.category based on ocsf.class_uid.
   - append:
-      tag: append_malware_into_event_category
+      tag: append_malware_into_event_category_1a939e60
       if: ctx.ocsf?.class_uid != null && ['2001'].contains(ctx.ocsf.class_uid)malware%!(EXTRA string= && ctx.ocsf.malware != null)
       field: event.category
       value: malware
       allow_duplicates: false
   - append:
-      tag: append_vulnerability_into_event_category
+      tag: append_vulnerability_into_event_category_565eaf27
       if: ctx.ocsf?.class_uid != null && ['2001','2002','2003','2004','2005'].contains(ctx.ocsf.class_uid)vulnerability%!(EXTRA string= && ctx.ocsf.vulnerabilities != null)
       field: event.category
       value: vulnerability
       allow_duplicates: false
   - append:
-      tag: append_iam_into_event_category
+      tag: append_iam_into_event_category_86649784
       if: ctx.ocsf?.class_uid != null && ['3001','3005','3006'].contains(ctx.ocsf.class_uid)iam%!(EXTRA string=)
       field: event.category
       value: iam
       allow_duplicates: false
   - append:
-      tag: append_authentication_into_event_category
+      tag: append_authentication_into_event_category_922f9d62
       if: ctx.ocsf?.class_uid != null && ['3002'].contains(ctx.ocsf.class_uid)authentication%!(EXTRA string=)
       field: event.category
       value: authentication
       allow_duplicates: false
   - append:
-      tag: append_session_into_event_category
+      tag: append_session_into_event_category_724d3d6d
       if: ctx.ocsf?.class_uid != null && ['3003'].contains(ctx.ocsf.class_uid)session%!(EXTRA string=)
       field: event.category
       value: session
       allow_duplicates: false
   - append:
-      tag: append_network_into_event_category
+      tag: append_network_into_event_category_69491830
       if: ctx.ocsf?.class_uid != null && ['4001','4003','4004','4005','4007','4008','4010','4013'].contains(ctx.ocsf.class_uid)network%!(EXTRA string=)
       field: event.category
       value: network
       allow_duplicates: false
   - append:
-      tag: append_api_into_event_category
+      tag: append_api_into_event_category_465d863b
       if: ctx.ocsf?.class_uid != null && ['4002','4006'].contains(ctx.ocsf.class_uid)api%!(EXTRA string=)
       field: event.category
       value: api
       allow_duplicates: false
   - append:
-      tag: append_file_into_event_category
+      tag: append_file_into_event_category_f6cce030
       if: ctx.ocsf?.class_uid != null && ['1001','4006','4008','4010','4011','6006'].contains(ctx.ocsf.class_uid)file%!(EXTRA string=)
       field: event.category
       value: file
       allow_duplicates: false
   - append:
-      tag: append_email_into_event_category
+      tag: append_email_into_event_category_f28f40e1
       if: ctx.ocsf?.class_uid != null && ['4009','4011','4012'].contains(ctx.ocsf.class_uid)email%!(EXTRA string=)
       field: event.category
       value: email
       allow_duplicates: false
   - append:
-      tag: append_web_into_event_category
+      tag: append_web_into_event_category_68397aac
       if: ctx.ocsf?.class_uid != null && ['6003','6004'].contains(ctx.ocsf.class_uid)web%!(EXTRA string=)
       field: event.category
       value: web
       allow_duplicates: false
   - append:
-      tag: append_package_into_event_category
+      tag: append_package_into_event_category_2514c187
       if: ctx.ocsf?.class_uid != null && ['6002'].contains(ctx.ocsf.class_uid)package%!(EXTRA string=)
       field: event.category
       value: package
       allow_duplicates: false
   - append:
-      tag: append_configuration_into_event_category
+      tag: append_configuration_into_event_category_772f07c0
       if: ctx.ocsf?.class_uid != null && ['5002'].contains(ctx.ocsf.class_uid)configuration%!(EXTRA string=)
       field: event.category
       value: configuration
       allow_duplicates: false
   - append:
-      tag: append_driver_into_event_category
+      tag: append_driver_into_event_category_9d32260e
       if: ctx.ocsf?.class_uid != null && ['1002','1003'].contains(ctx.ocsf.class_uid)driver%!(EXTRA string=)
       field: event.category
       value: driver
       allow_duplicates: false
   - append:
-      tag: append_process_into_event_category
+      tag: append_process_into_event_category_b9b03cbd
       if: ctx.ocsf?.class_uid != null && ['1007'].contains(ctx.ocsf.class_uid)process%!(EXTRA string=)
       field: event.category
       value: process
       allow_duplicates: false
   - append:
-      tag: append_info_into_event_category
+      tag: append_info_into_event_category_993ff920
       if: ctx.ocsf?.class_uid != null && ['1001','1002','1003','1007','2001','2002','2003','2004','2005','3001','3002','3003','3005','3006','4001','4002','4003','4004','4005','4006','4007','4008','4009','4010','4011','4012','4013','5001','5002','5003','5004','5019','6002','6003','6004','6005','6006','6007'].contains(ctx.ocsf.class_uid)info%!(EXTRA string=)
       field: event.category
       value: info
       allow_duplicates: false
   - append:
-      tag: append_user_into_event_category
+      tag: append_user_into_event_category_42baa0de
       if: ctx.ocsf?.class_uid != null && ['3001','3006'].contains(ctx.ocsf.class_uid)user%!(EXTRA string=)
       field: event.category
       value: user
       allow_duplicates: false
   - append:
-      tag: append_group_into_event_category
+      tag: append_group_into_event_category_2e7bd7a9
       if: ctx.ocsf?.class_uid != null && ['3005'].contains(ctx.ocsf.class_uid)group%!(EXTRA string=)
       field: event.category
       value: group
       allow_duplicates: false
   - append:
-      tag: append_protocol_into_event_category
+      tag: append_protocol_into_event_category_9b19fa9e
       if: ctx.ocsf?.class_uid != null && ['4003','4004','4005','4007','4008'].contains(ctx.ocsf.class_uid)protocol%!(EXTRA string=)
       field: event.category
       value: protocol
       allow_duplicates: false
   - append:
-      tag: append_creation_into_event_category
+      tag: append_creation_into_event_category_88a1c6c8
       if: ctx.ocsf?.class_uid != null && ['1001','2005','3001','4006','5002'].contains(ctx.ocsf.class_uid)creation%!(EXTRA string= && ['Create','File Create','Log'].contains(ctx.ocsf.activity_name))
       field: event.category
       value: creation
       allow_duplicates: false
   - append:
-      tag: append_access_into_event_category
+      tag: append_access_into_event_category_475acad6
       if: ctx.ocsf?.class_uid != null && ['1001','4006','4010','5002','6004'].contains(ctx.ocsf.class_uid)access%!(EXTRA string= && ['Read','File Open','Preview','Open','Access Grant','Access Deny','Access Revoke','Access Error','Log'].contains(ctx.ocsf.activity_name))
       field: event.category
       value: access
       allow_duplicates: false
   - append:
-      tag: append_deletion_into_event_category
+      tag: append_deletion_into_event_category_cb374f70
       if: ctx.ocsf?.class_uid != null && ['1001','3001','4010','6002'].contains(ctx.ocsf.class_uid)deletion%!(EXTRA string= && ['Delete','Remove'].contains(ctx.ocsf.activity_name))
       field: event.category
       value: deletion
       allow_duplicates: false
   - append:
-      tag: append_start_into_event_category
+      tag: append_start_into_event_category_2687a050
       if: ctx.ocsf?.class_uid != null && ['1007','3002','4001','4013','4007','6002','6007'].contains(ctx.ocsf.class_uid)start%!(EXTRA string= && ['Launch','Logon','Open','Start','Started','Symmetric Active Exchange','Client Synchronization','Broadcast','Control'].contains(ctx.ocsf.activity_name))
       field: event.category
       value: start
       allow_duplicates: false
   - append:
-      tag: append_end_into_event_category
+      tag: append_end_into_event_category_ec74fa83
       if: ctx.ocsf?.class_uid != null && ['1007','2005','3002','4001','4007','4013','6002','6007'].contains(ctx.ocsf.class_uid)end%!(EXTRA string= && ['Terminate','Logoff','Close','Completed','Stop','Symmetric Passive Response','Server Response','Private Use Case','Other'].contains(ctx.ocsf.activity_name))
       field: event.category
       value: end
       allow_duplicates: false
   - append:
-      tag: append_denied_into_event_category
+      tag: append_denied_into_event_category_7f1f5021
       if: ctx.ocsf?.class_uid != null && ['4001','4003','4004','4007'].contains(ctx.ocsf.class_uid)denied%!(EXTRA string= && ['Refuse','Decline'].contains(ctx.ocsf.activity_name))
       field: event.category
       value: denied
       allow_duplicates: false
   - append:
-      tag: append_allowed_into_event_category
+      tag: append_allowed_into_event_category_eae2bc8d
       if: ctx.ocsf?.class_uid != null && ['4004'].contains(ctx.ocsf.class_uid)allowed%!(EXTRA string= && ['Ack'].contains(ctx.ocsf.activity_name))
       field: event.category
       value: allowed
       allow_duplicates: false
   - append:
-      tag: append_change_into_event_category
+      tag: append_change_into_event_category_2e61e977
       if: ctx.ocsf?.class_uid != null && ['1001','2005','4006','4010'].contains(ctx.ocsf.class_uid)change%!(EXTRA string= && ['Update','File Supersede','File Overwrite','Update','Rename'].contains(ctx.ocsf.activity_name))
       field: event.category
       value: change
       allow_duplicates: false
   - append:
-      tag: append_connection_into_event_category
+      tag: append_connection_into_event_category_99dfe4df
       if: ctx.ocsf?.class_uid != null && ['4005'].contains(ctx.ocsf.class_uid)connection%!(EXTRA string= && ['Connect Request','Connect Response'].contains(ctx.ocsf.activity_name))
       field: event.category
       value: connection
       allow_duplicates: false
   - append:
-      tag: append_installation_into_event_category
+      tag: append_installation_into_event_category_24499f9a
       if: ctx.ocsf?.class_uid != null && ['6002','5004'].contains(ctx.ocsf.class_uid)installation%!(EXTRA string= && ['Install','Log','Collect'].contains(ctx.ocsf.activity_name))
       field: event.category
       value: installation
       allow_duplicates: false
   - append:
-      tag: append_error_into_event_category
+      tag: append_error_into_event_category_0776d655
       if: ctx.ocsf?.class_uid != null && ['6004','6007'].contains(ctx.ocsf.class_uid)error%!(EXTRA string= && ['Access Error','Error'].contains(ctx.ocsf.activity_name))
       field: event.category
       value: error
@@ -1287,779 +1287,791 @@ processors:
 
   # Set cloud details.
   - set:
-      tag: set_cloud_account_id_1
+      tag: set_cloud_account_id_bef9c95e
       field: cloud.account.id
       copy_from: ocsf.cloud.account.uid
       ignore_empty_value: true
   - set:
-      tag: set_cloud_account_id_2
+      tag: set_cloud_account_id_bdf9c7cb
       field: cloud.account.id
       copy_from: ocsf.cloud.account.uid
       ignore_empty_value: true
   - set:
-      tag: set_cloud_account_name
+      tag: set_cloud_account_name_7a02b414
       field: cloud.account.name
       copy_from: ocsf.cloud.account.name
       ignore_empty_value: true
   - set:
-      tag: set_cloud_availability_zone
+      tag: set_cloud_availability_zone_020e31f4
       field: cloud.availability_zone
       copy_from: ocsf.cloud.zone
       ignore_empty_value: true
   - set:
-      tag: set_cloud_project_id
+      tag: set_cloud_project_id_aae20e6a
       field: cloud.project.id
       copy_from: ocsf.cloud.project_uid
       ignore_empty_value: true
   - set:
-      tag: set_cloud_provider
+      tag: set_cloud_provider_4a0163fe
       field: cloud.provider
       copy_from: ocsf.cloud.provider
       ignore_empty_value: true
   - set:
-      tag: set_cloud_region
+      tag: set_cloud_region_03116718
       field: cloud.region
       copy_from: ocsf.cloud.region
       ignore_empty_value: true
   - lowercase:
-      tag: lowercase_ocsf_activity_name_into_event_action
+      tag: lowercase_ocsf_activity_name_into_event_action_507c0c93
       field: ocsf.activity_name
       target_field: event.action
       ignore_missing: true
       on_failure:
         - remove:
-            tag: remove_01
+            tag: remove_d375eb38
             field:
               - ocsf.activity_name
             ignore_missing: true
         - append:
-            tag: append_error_message_03
+            tag: append_error_message_d967b5c1
             field: error.message
             value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
   - gsub:
-      tag: gsub_event_action
+      tag: gsub_event_action_8311a070
       field: event.action
       pattern: '[: ]'
       replacement: '-'
       ignore_missing: true
       on_failure:
         - remove:
-            tag: remove_02
+            tag: remove_089d1a9f
             field:
               - event.action
             ignore_missing: true
         - append:
-            tag: append_error_message_04
+            tag: append_error_message_cc359760
             field: error.message
             value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
   - set:
-      tag: set_event_code
+      tag: set_event_code_60b52da6
       field: event.code
       copy_from: ocsf.metadata.event_code
       ignore_empty_value: true
   - convert:
-      tag: convert_ocsf_duration_to_long
+      tag: convert_ocsf_duration_to_long_e67f3cc7
       field: ocsf.duration
       type: long
       ignore_missing: true
       on_failure:
         - remove:
-            tag: remove_03
+            tag: remove_6382c78b
             field:
               - ocsf.duration
             ignore_missing: true
         - append:
-            tag: append_error_message_05
+            tag: append_error_message_74e87eb5
             field: error.message
             value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
   - script:
       description: Convert duration from milliseconds to nanoseconds.
-      tag: script_duration_ms_to_ns
+      tag: script_duration_ms_to_ns_ae22177d
       if: ctx.ocsf?.duration != null
       source: ctx.event.duration = ctx.ocsf.duration * 1000000;
   - set:
-      tag: set_event_id
+      tag: set_event_id_73b57ae2
       field: event.id
       copy_from: ocsf.metadata.uid
       ignore_empty_value: true
   - set:
-      tag: set_event_provider_1
+      tag: set_event_provider_fd7f6944
       field: event.provider
       copy_from: ocsf.metadata.log_provider
       ignore_empty_value: true
   - set:
-      tag: set_event_provider_2
+      tag: set_event_provider_7216e436
       if: ctx.ocsf?.metadata?.log_provider == null
       field: event.provider
       copy_from: ocsf.metadata.product.vendor_name
       ignore_empty_value: true
   - convert:
-      tag: convert_ocsf_metadata_sequence_to_long
+      tag: convert_ocsf_metadata_sequence_to_long_1e2fa077
       field: ocsf.metadata.sequence
       type: long
       ignore_missing: true
       on_failure:
         - remove:
-            tag: remove_04
+            tag: remove_a493be91
             field:
               - ocsf.metadata.sequence
             ignore_missing: true
         - append:
-            tag: append_error_message_06
+            tag: append_error_message_e4305de5
             field: error.message
             value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
   - set:
-      tag: set_event_sequence
+      tag: set_event_sequence_1331d28b
       field: event.sequence
       copy_from: ocsf.metadata.sequence
       ignore_empty_value: true
   - set:
-      tag: set_message
+      tag: set_message_ef36f54a
       field: message
       copy_from: ocsf.message
       ignore_empty_value: true
   - foreach:
-      tag: foreach_of_ocsf_metadata_labels
+      tag: foreach_of_ocsf_metadata_labels_e97ec36d
       if: ctx.ocsf?.metadata?.labels instanceof List
       field: ocsf.metadata.labels
       processor:
         append:
-          tag: append_tags_2
+          tag: append_tags_955e0169
           field: tags
           value: '{{{_ingest._value}}}'
           allow_duplicates: false
   - convert:
-      tag: convert_ocsf_activity_id_to_string
+      tag: convert_ocsf_activity_id_to_string_8ea93958
       field: ocsf.activity_id
       type: string
       ignore_missing: true
   - convert:
-      tag: convert_ocsf_category_uid_to_string
+      tag: convert_ocsf_category_uid_to_string_63d06fd0
       field: ocsf.category_uid
       type: string
       ignore_missing: true
   - convert:
-      tag: convert_ocsf_cloud_account_type_id_to_string
+      tag: convert_ocsf_cloud_account_type_id_to_string_a9ef8483
       field: ocsf.cloud.account.type_id
       type: string
       ignore_missing: true
   - convert:
-      tag: convert_ocsf_resource_owner_type_id_to_string
+      tag: convert_ocsf_resource_owner_type_id_to_string_335bae6e
       field: ocsf.resource.owner.type_id
       type: string
       ignore_missing: true
   - convert:
-      tag: convert_ocsf_api_response_code_to_long
+      tag: convert_ocsf_api_response_code_to_long_f5af44ab
       field: ocsf.api.response.code
       type: long
       ignore_missing: true
       on_failure:
         - remove:
-            tag: remove_05
+            tag: remove_3de67b45
             field:
               - ocsf.api.response.code
             ignore_missing: true
         - append:
-            tag: append_error_message_07
+            tag: append_error_message_14719129
             field: error.message
             value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
   - convert:
-      tag: convert_ocsf_count_to_long
+      tag: convert_ocsf_count_to_long_e37e7fa1
       field: ocsf.count
       type: long
       ignore_missing: true
       on_failure:
         - remove:
-            tag: remove_06
+            tag: remove_c2bcc640
             field:
               - ocsf.count
             ignore_missing: true
         - append:
-            tag: append_error_message_08
+            tag: append_error_message_ab364e27
             field: error.message
             value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
   - date:
-      tag: date_ocsf_end_time_dt_into_ocsf_end_time_dt
+      tag: date_ocsf_end_time_dt_into_ocsf_end_time_dt_d3eb9563
       if: ctx.ocsf?.end_time_dt != null && ctx.ocsf.end_time_dt != ''
-      field: ocsf.end_time_dt    target_field: ocsf.end_time_dt
+      field: ocsf.end_time_dt
+      target_field: ocsf.end_time_dt
       formats:
         - ISO8601
       on_failure:
         - remove:
-            tag: remove_07
+            tag: remove_f0ecddb9
             field:
               - ocsf.end_time_dt
             ignore_missing: true
         - append:
-            tag: append_error_message_09
+            tag: append_error_message_cfe5c391
             field: error.message
             value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
   - set:
-      tag: set_event_end_1
+      tag: set_event_end_668e0e1f
       field: event.end
       copy_from: ocsf.end_time_dt
       ignore_empty_value: true
   - date:
-      tag: date_ocsf_end_time_into_ocsf_end_time
+      tag: date_ocsf_end_time_into_ocsf_end_time_a168aa6f
       if: ctx.ocsf?.end_time != null && ctx.ocsf.end_time != ''
-      field: ocsf.end_time    target_field: ocsf.end_time
+      field: ocsf.end_time
+      target_field: ocsf.end_time
       formats:
         - UNIX_MS
       on_failure:
         - remove:
-            tag: remove_08
+            tag: remove_7c96c4a4
             field:
               - ocsf.end_time
             ignore_missing: true
         - append:
-            tag: append_error_message_10
+            tag: append_error_message_0fdf4c6d
             field: error.message
             value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
   - set:
-      tag: set_event_end_2
+      tag: set_event_end_1125b6ca
       field: event.end
       copy_from: ocsf.end_time
       ignore_empty_value: true
   - date:
-      tag: date_ocsf_time_dt
+      tag: date_ocsf_time_dt_4e1ce2cc
       if: ctx.ocsf?.time_dt != null && ctx.ocsf.time_dt != ''
       field: ocsf.time_dt
       formats:
         - ISO8601
       on_failure:
         - remove:
-            tag: remove_09
+            tag: remove_732143c8
             field:
               - ocsf.time_dt
             ignore_missing: true
         - append:
-            tag: append_error_message_11
+            tag: append_error_message_7e4d7d6c
             field: error.message
             value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
   - date:
-      tag: date_ocsf_time
+      tag: date_ocsf_time_e98ef036
       if: ctx.ocsf?.time != null && ctx.ocsf.time != ''
       field: ocsf.time
       formats:
         - UNIX_MS
       on_failure:
         - remove:
-            tag: remove_10
+            tag: remove_4a9bfeee
             field:
               - ocsf.time_dt
             ignore_missing: true
         - append:
-            tag: append_error_message_12
+            tag: append_error_message_27b1a8f6
             field: error.message
             value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
   - date:
-      tag: date_ocsf_time_dt_into_ocsf_time_dt
+      tag: date_ocsf_time_dt_into_ocsf_time_dt_dc20a71d
       if: ctx.ocsf?.time_dt != null && ctx.ocsf.time_dt != ''
-      field: ocsf.time_dt    target_field: ocsf.time_dt
+      field: ocsf.time_dt
+      target_field: ocsf.time_dt
       formats:
         - ISO8601
       on_failure:
         - remove:
-            tag: remove_11
+            tag: remove_7689cf9d
             field:
               - ocsf.time_dt
             ignore_missing: true
         - append:
-            tag: append_error_message_13
+            tag: append_error_message_3c390c33
             field: error.message
             value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
   - date:
-      tag: date_ocsf_time_into_ocsf_time
+      tag: date_ocsf_time_into_ocsf_time_8e07ace8
       if: ctx.ocsf?.time != null && ctx.ocsf.time != ''
-      field: ocsf.time    target_field: ocsf.time
+      field: ocsf.time
+      target_field: ocsf.time
       formats:
         - UNIX_MS
       on_failure:
         - remove:
-            tag: remove_12
+            tag: remove_54e039bc
             field:
               - ocsf.time_dt
             ignore_missing: true
         - append:
-            tag: append_error_message_14
+            tag: append_error_message_90854e48
             field: error.message
             value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
   - date:
-      tag: date_ocsf_metadata_logged_time_dt_into_ocsf_metadata_logged_time_dt
+      tag: date_ocsf_metadata_logged_time_dt_into_ocsf_metadata_logged_time_dt_669d43c6
       if: ctx.ocsf?.metadata?.logged_time_dt != null && ctx.ocsf.metadata.logged_time_dt != ''
-      field: ocsf.metadata.logged_time_dt    target_field: ocsf.metadata.logged_time_dt
+      field: ocsf.metadata.logged_time_dt
+      target_field: ocsf.metadata.logged_time_dt
       formats:
         - ISO8601
       on_failure:
         - remove:
-            tag: remove_13
+            tag: remove_5abcb5be
             field:
               - ocsf.time_dt
             ignore_missing: true
         - append:
-            tag: append_error_message_15
+            tag: append_error_message_0c4ba606
             field: error.message
             value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
   - date:
-      tag: date_ocsf_metadata_logged_time_into_ocsf_metadata_logged_time
+      tag: date_ocsf_metadata_logged_time_into_ocsf_metadata_logged_time_93803765
       if: ctx.ocsf?.metadata?.logged_time != null && ctx.ocsf.metadata.logged_time != ''
-      field: ocsf.metadata.logged_time    target_field: ocsf.metadata.logged_time
+      field: ocsf.metadata.logged_time
+      target_field: ocsf.metadata.logged_time
       formats:
         - UNIX_MS
       on_failure:
         - remove:
-            tag: remove_14
+            tag: remove_5ff0b645
             field:
               - ocsf.time_dt
             ignore_missing: true
         - append:
-            tag: append_error_message_16
+            tag: append_error_message_902e900b
             field: error.message
             value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
   - date:
-      tag: date_ocsf_metadata_modified_time_dt_into_ocsf_metadata_modified_time_dt
+      tag: date_ocsf_metadata_modified_time_dt_into_ocsf_metadata_modified_time_dt_09fc21a6
       if: ctx.ocsf?.metadata?.modified_time_dt != null && ctx.ocsf.metadata.modified_time_dt != ''
-      field: ocsf.metadata.modified_time_dt    target_field: ocsf.metadata.modified_time_dt
+      field: ocsf.metadata.modified_time_dt
+      target_field: ocsf.metadata.modified_time_dt
       formats:
         - ISO8601
       on_failure:
         - remove:
-            tag: remove_15
+            tag: remove_d338fcde
             field:
               - ocsf.time_dt
             ignore_missing: true
         - append:
-            tag: append_error_message_17
+            tag: append_error_message_ad9ce166
             field: error.message
             value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
   - date:
-      tag: date_ocsf_metadata_modified_time_into_ocsf_metadata_modified_time
+      tag: date_ocsf_metadata_modified_time_into_ocsf_metadata_modified_time_20d1c991
       if: ctx.ocsf?.metadata?.modified_time != null && ctx.ocsf.metadata.modified_time != ''
-      field: ocsf.metadata.modified_time    target_field: ocsf.metadata.modified_time
+      field: ocsf.metadata.modified_time
+      target_field: ocsf.metadata.modified_time
       formats:
         - UNIX_MS
       on_failure:
         - remove:
-            tag: remove_16
+            tag: remove_bd49aab9
             field:
               - ocsf.time_dt
             ignore_missing: true
         - append:
-            tag: append_error_message_18
+            tag: append_error_message_4ddab217
             field: error.message
             value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
   - date:
-      tag: date_ocsf_metadata_processed_time_dt_into_ocsf_metadata_processed_time_dt
+      tag: date_ocsf_metadata_processed_time_dt_into_ocsf_metadata_processed_time_dt_16de4568
       if: ctx.ocsf?.metadata?.processed_time_dt != null && ctx.ocsf.metadata.processed_time_dt != ''
-      field: ocsf.metadata.processed_time_dt    target_field: ocsf.metadata.processed_time_dt
+      field: ocsf.metadata.processed_time_dt
+      target_field: ocsf.metadata.processed_time_dt
       formats:
         - ISO8601
       on_failure:
         - remove:
-            tag: remove_17
+            tag: remove_ee0aca3c
             field:
               - ocsf.time_dt
             ignore_missing: true
         - append:
-            tag: append_error_message_19
+            tag: append_error_message_107797c8
             field: error.message
             value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
   - date:
-      tag: date_ocsf_metadata_processed_time_into_ocsf_metadata_processed_time
+      tag: date_ocsf_metadata_processed_time_into_ocsf_metadata_processed_time_56358495
       if: ctx.ocsf?.metadata?.processed_time != null && ctx.ocsf.metadata.processed_time != ''
-      field: ocsf.metadata.processed_time    target_field: ocsf.metadata.processed_time
+      field: ocsf.metadata.processed_time
+      target_field: ocsf.metadata.processed_time
       formats:
         - UNIX_MS
       on_failure:
         - remove:
-            tag: remove_18
+            tag: remove_54e519b5
             field:
               - ocsf.time_dt
             ignore_missing: true
         - append:
-            tag: append_error_message_20
+            tag: append_error_message_0be4847b
             field: error.message
             value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
   - foreach:
-      tag: foreach_of_ocsf_observables_1
+      tag: foreach_of_ocsf_observables_5afa1896
       if: ctx.ocsf?.observables instanceof List
       field: ocsf.observables
       processor:
         convert:
-          tag: convert__ingest__value_reputation_base_score_to_double
+          tag: convert__ingest__value_reputation_base_score_to_double_bf5666c5
           field: _ingest._value.reputation.base_score
           type: double
           ignore_missing: true
           on_failure:
             - remove:
-                tag: remove_19
+                tag: remove_654c6308
                 field:
                   - _ingest._value.reputation.base_score
                 ignore_missing: true
             - append:
-                tag: append_error_message_21
+                tag: append_error_message_059ab3eb
                 field: error.message
                 value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
       ignore_failure: true
   - foreach:
-      tag: foreach_of_ocsf_observables_2
+      tag: foreach_of_ocsf_observables_1a605974
       if: ctx.ocsf?.observables instanceof List
       field: ocsf.observables
       processor:
         convert:
-          tag: convert__ingest__value_reputation_score_id_to_string
+          tag: convert__ingest__value_reputation_score_id_to_string_a51a4b3d
           field: _ingest._value.reputation.score_id
           type: string
           ignore_missing: true
       ignore_failure: true
   - foreach:
-      tag: foreach_of_ocsf_observables_3
+      tag: foreach_of_ocsf_observables_89d191eb
       if: ctx.ocsf?.observables instanceof List
       field: ocsf.observables
       processor:
         convert:
-          tag: convert__ingest__value_type_id_to_string
+          tag: convert__ingest__value_type_id_to_string_04f20e4b
           field: _ingest._value.type_id
           type: string
           ignore_missing: true
       ignore_failure: true
   - convert:
-      tag: convert_ocsf_severity_id_to_long
+      tag: convert_ocsf_severity_id_to_long_417b66a9
       field: ocsf.severity_id
       type: long
       ignore_missing: true
       on_failure:
         - remove:
-            tag: remove_20
+            tag: remove_ad549aae
             field:
               - ocsf.severity_id
             ignore_missing: true
         - append:
-            tag: append_error_message_22
+            tag: append_error_message_e54bbd1f
             field: error.message
             value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
   - set:
-      tag: set_event_severity
+      tag: set_event_severity_0b2e1a40
       field: event.severity
       copy_from: ocsf.severity_id
       ignore_empty_value: true
   - date:
-      tag: date_ocsf_start_time_dt_into_ocsf_start_time_dt
+      tag: date_ocsf_start_time_dt_into_ocsf_start_time_dt_9b68ed7c
       if: ctx.ocsf?.start_time_dt != null && ctx.ocsf.start_time_dt != ''
-      field: ocsf.start_time_dt    target_field: ocsf.start_time_dt
+      field: ocsf.start_time_dt
+      target_field: ocsf.start_time_dt
       formats:
         - ISO8601
       on_failure:
         - remove:
-            tag: remove_21
+            tag: remove_b5a8fa23
             field:
               - ocsf.start_time_dt
             ignore_missing: true
         - append:
-            tag: append_error_message_23
+            tag: append_error_message_04969b1c
             field: error.message
             value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
   - set:
-      tag: set_event_start_1
+      tag: set_event_start_444841b3
       field: event.start
       copy_from: ocsf.start_time_dt
       ignore_empty_value: true
   - date:
-      tag: date_ocsf_start_time_into_ocsf_start_time
+      tag: date_ocsf_start_time_into_ocsf_start_time_97251b36
       if: ctx.ocsf?.start_time != null && ctx.ocsf.start_time != ''
-      field: ocsf.start_time    target_field: ocsf.start_time
+      field: ocsf.start_time
+      target_field: ocsf.start_time
       formats:
         - UNIX_MS
       on_failure:
         - remove:
-            tag: remove_22
+            tag: remove_2f1972cc
             field:
               - ocsf.start_time
             ignore_missing: true
         - append:
-            tag: append_error_message_24
+            tag: append_error_message_7fc329f6
             field: error.message
             value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
   - set:
-      tag: set_event_start_2
+      tag: set_event_start_18785c38
       field: event.start
       copy_from: ocsf.start_time
       ignore_empty_value: true
   - convert:
-      tag: convert_ocsf_status_id_to_string
+      tag: convert_ocsf_status_id_to_string_01990827
       field: ocsf.status_id
       type: string
       ignore_missing: true
   - set:
-      tag: set_event_outcome_1
+      tag: set_event_outcome_ec581dce
       if: ctx.ocsf?.status_id == '0'
       field: event.outcome
       value: unknown
   - set:
-      tag: set_event_outcome_2
+      tag: set_event_outcome_57ab6a9e
       if: ctx.ocsf?.status_id == '1'
       field: event.outcome
       value: success
   - set:
-      tag: set_event_outcome_3
+      tag: set_event_outcome_6860acc0
       if: ctx.ocsf?.status_id == '2'
       field: event.outcome
       value: failure
   - convert:
-      tag: convert_ocsf_timezone_offset_to_long
+      tag: convert_ocsf_timezone_offset_to_long_7b374cd1
       field: ocsf.timezone_offset
       type: long
       ignore_missing: true
       on_failure:
         - remove:
-            tag: remove_23
+            tag: remove_e754c2c8
             field:
               - ocsf.timezone_offset
             ignore_missing: true
         - append:
-            tag: append_error_message_25
+            tag: append_error_message_627cd457
             field: error.message
             value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
   - convert:
-      tag: convert_ocsf_type_uid_to_string
+      tag: convert_ocsf_type_uid_to_string_28c00d54
       field: ocsf.type_uid
       type: string
       ignore_missing: true
   - json:
-      tag: json_ocsf_raw_data
+      tag: json_ocsf_raw_data_1bb82173
       if: ctx.ocsf?.raw_data instanceof String
       field: ocsf.raw_data
       on_failure:
         - rename:
-            tag: rename_ocsf_raw_data_to_ocsf_raw_data_keyword
+            tag: rename_ocsf_raw_data_to_ocsf_raw_data_keyword_df98e33d
             field: ocsf.raw_data
             target_field: ocsf.raw_data_keyword
   - pipeline:
-      tag: pipeline_pipeline_object_actor
+      tag: pipeline_pipeline_object_actor_5e2a33fa
       if: ctx.ocsf?.class_uid != null && ['1001','1002','1003','1004','1005','1006','1007','2002','2003','3001','3002','3003','3004','3005','4001','4002','4003','4004','4005','4006','4007','4008','4009','4010','4011','4012','4013','5001','5002','5003','5019','6001','6002','6003','6004','6005','6006','6007'].contains(ctx.ocsf.class_uid) && ctx.ocsf.actor != null
       name: '{{ IngestPipeline "pipeline_object_actor" }}'
       ignore_missing_pipeline: true
   - pipeline:
-      tag: pipeline_pipeline_object_attack
+      tag: pipeline_pipeline_object_attack_f9c81c68
       if: ctx.ocsf?.class_uid != null && ['1001','1002','1003','1004','1005','1006','1007','2001','4001','4002','4003','4005','4006','4007','4008','4009','4011','4012','4013'].contains(ctx.ocsf.class_uid) && ctx.ocsf.attacks != null
       name: '{{ IngestPipeline "pipeline_object_attack" }}'
       ignore_missing_pipeline: true
   - pipeline:
-      tag: pipeline_pipeline_object_network_connection_info
+      tag: pipeline_pipeline_object_network_connection_info_8bfd58a6
       if: ctx.ocsf?.class_uid != null && ['4001','4002','4003','4005','4006','4007','4008','4013','6006'].contains(ctx.ocsf.class_uid) && ctx.ocsf.connection_info != null
       name: '{{ IngestPipeline "pipeline_object_network_connection_info" }}'
       ignore_missing_pipeline: true
   - pipeline:
-      tag: pipeline_pipeline_object_device
+      tag: pipeline_pipeline_object_device_dbf09d30
       if: ctx.ocsf?.class_uid != null && ['1001','1002','1003','1004','1005','1006','1007','2002','2003','3001','3002','3003','3004','3005','4001','4002','4003','4004','4005','4006','4007','4008','4009','4011','4012','4013','5001','5002','5004','5019','6001','6002','6004','6007'].contains(ctx.ocsf.class_uid) && ctx.ocsf.device != null
       name: '{{ IngestPipeline "pipeline_object_device" }}'
       ignore_missing_pipeline: true
   - pipeline:
-      tag: pipeline_pipeline_object_http_request
+      tag: pipeline_pipeline_object_http_request_12c4f09e
       if: ctx.ocsf?.class_uid != null && ['3001','3002','4002','6003','6004','6005'].contains(ctx.ocsf.class_uid) && ctx.ocsf.http_request != null
       name: '{{ IngestPipeline "pipeline_object_http_request" }}'
       ignore_missing_pipeline: true
   - pipeline:
-      tag: pipeline_pipeline_object_malware
+      tag: pipeline_pipeline_object_malware_6530de0e
       if: ctx.ocsf?.class_uid != null && ['2001','4001','4002','4003','4005','4006','4007','4008','4009','4011','4012','4013'].contains(ctx.ocsf.class_uid) && ctx.ocsf.malware != null
       name: '{{ IngestPipeline "pipeline_object_malware" }}'
       ignore_missing_pipeline: true
   - pipeline:
-      tag: pipeline_pipeline_object_network_endpoint
+      tag: pipeline_pipeline_object_network_endpoint_702cea9c
       if: ctx.ocsf?.class_uid != null && ['3001','3002','3003','3005','4001','4002','4003','4004','4005','4006','4007','4008','4009','4010','4013','6001','6003','6004','6005','6006'].contains(ctx.ocsf.class_uid) && (ctx.ocsf.dst_endpoint != null || ctx.ocsf.src_endpoint != null)
       name: '{{ IngestPipeline "pipeline_object_network_endpoint" }}'
       ignore_missing_pipeline: true
   - pipeline:
-      tag: pipeline_pipeline_object_process
+      tag: pipeline_pipeline_object_process_6ef17933
       if: ctx.ocsf?.class_uid != null && ['1004','1007','2001'].contains(ctx.ocsf.class_uid) && ctx.ocsf.process != null
       name: '{{ IngestPipeline "pipeline_object_process" }}'
       ignore_missing_pipeline: true
   - pipeline:
-      tag: pipeline_pipeline_object_proxy
+      tag: pipeline_pipeline_object_proxy_d4de718d
       if: ctx.ocsf?.class_uid != null && ['4001','4002','4003','4005','4006','4007','4008','4013'].contains(ctx.ocsf.class_uid) && ctx.ocsf.proxy != null
       name: '{{ IngestPipeline "pipeline_object_proxy" }}'
       ignore_missing_pipeline: true
   - pipeline:
-      tag: pipeline_pipeline_object_tls
+      tag: pipeline_pipeline_object_tls_754bfeb5
       if: ctx.ocsf?.class_uid != null && ['4001','4002','4003','4005','4006','4007','4008','4013'].contains(ctx.ocsf.class_uid) && ctx.ocsf.tls != null
       name: '{{ IngestPipeline "pipeline_object_tls" }}'
       ignore_missing_pipeline: true
   - pipeline:
-      tag: pipeline_pipeline_object_traffic
+      tag: pipeline_pipeline_object_traffic_cdca5295
       if: ctx.ocsf?.class_uid != null && ['4001','4002','4003','4005','4006','4007','4008','4013'].contains(ctx.ocsf.class_uid) && ctx.ocsf.traffic != null
       name: '{{ IngestPipeline "pipeline_object_traffic" }}'
       ignore_missing_pipeline: true
   - pipeline:
-      tag: pipeline_pipeline_object_user
+      tag: pipeline_pipeline_object_user_abb99e64
       if: ctx.ocsf?.class_uid != null && ['2005','3001','3002','3003','3005','3006','5003'].contains(ctx.ocsf.class_uid) && ctx.ocsf.user != null
       name: '{{ IngestPipeline "pipeline_object_user" }}'
       ignore_missing_pipeline: true
   - pipeline:
-      tag: pipeline_pipeline_object_file
+      tag: pipeline_pipeline_object_file_381fec15
       if: ctx.ocsf?.class_uid != null && ['1001','4006','4010','4011','6006'].contains(ctx.ocsf.class_uid)
       name: '{{ IngestPipeline "pipeline_object_file" }}'
       ignore_missing_pipeline: true
   - pipeline:
-      tag: pipeline_pipeline_object_system_activity_helper
+      tag: pipeline_pipeline_object_system_activity_helper_c91047be
       if: ctx.ocsf?.class_uid != null && ['1002','1005','1006'].contains(ctx.ocsf.class_uid)
       name: '{{ IngestPipeline "pipeline_object_system_activity_helper" }}'
       ignore_missing_pipeline: true
   - pipeline:
-      tag: pipeline_pipeline_category_system_activity
+      tag: pipeline_pipeline_category_system_activity_dd5053fd
       if: ctx.ocsf?.category_uid != null && ctx.ocsf.category_uid == '1'
       name: '{{ IngestPipeline "pipeline_category_system_activity" }}'
       ignore_missing_pipeline: true
   - pipeline:
-      tag: pipeline_pipeline_category_findings
+      tag: pipeline_pipeline_category_findings_f949ff61
       if: ctx.ocsf?.category_uid != null && ctx.ocsf.category_uid == '2'
       name: '{{ IngestPipeline "pipeline_category_findings" }}'
       ignore_missing_pipeline: true
   - pipeline:
-      tag: pipeline_pipeline_category_identity_and_access_management
+      tag: pipeline_pipeline_category_identity_and_access_management_24c65677
       if: ctx.ocsf?.category_uid != null && ctx.ocsf.category_uid == '3'
       name: '{{ IngestPipeline "pipeline_category_identity_and_access_management" }}'
       ignore_missing_pipeline: true
   - pipeline:
-      tag: pipeline_pipeline_category_network_activity
+      tag: pipeline_pipeline_category_network_activity_37727b33
       if: ctx.ocsf?.category_uid != null && ctx.ocsf.category_uid == '4'
       name: '{{ IngestPipeline "pipeline_category_network_activity" }}'
       ignore_missing_pipeline: true
   - pipeline:
-      tag: pipeline_pipeline_category_application_activity
+      tag: pipeline_pipeline_category_application_activity_c49d6295
       if: ctx.ocsf?.category_uid != null && ctx.ocsf.category_uid == '6'
       name: '{{ IngestPipeline "pipeline_category_application_activity" }}'
       ignore_missing_pipeline: true
   - pipeline:
-      tag: pipeline_pipeline_category_discovery
+      tag: pipeline_pipeline_category_discovery_7f116644
       if: ctx.ocsf?.category_uid != null && ctx.ocsf.category_uid == '5'
       name: '{{ IngestPipeline "pipeline_category_discovery" }}'
       ignore_missing_pipeline: true
   - foreach:
-      tag: foreach_of_ocsf_process_user_groups
+      tag: foreach_of_ocsf_process_user_groups_826d41be
       if: ctx.ocsf?.process?.user?.groups instanceof List
       field: ocsf.process.user.groups
       processor:
         remove:
-          tag: remove_duplicate_custom_fields_from_ocsf_process_user_groups_array
+          tag: remove_duplicate_custom_fields_from_ocsf_process_user_groups_array_296483d1
           if: ctx.tags == null || !(ctx.tags.contains('preserve_duplicate_custom_fields'))
           field:
             - _ingest._value.uid
             - _ingest._value.name
       ignore_failure: true
   - foreach:
-      tag: foreach_of_ocsf_process_process_groups
+      tag: foreach_of_ocsf_process_process_groups_b2b82d58
       if: ctx.ocsf?.process?.process?.groups instanceof List
       field: ocsf.process.process.groups
       processor:
         remove:
-          tag: remove_duplicate_custom_fields_from_ocsf_process_process_groups_array
+          tag: remove_duplicate_custom_fields_from_ocsf_process_process_groups_array_23fae1cf
           if: ctx.tags == null || !(ctx.tags.contains('preserve_duplicate_custom_fields'))
           field:
             - _ingest._value.uid
             - _ingest._value.name
       ignore_failure: true
   - foreach:
-      tag: foreach_of_ocsf_process_parent_process_user_groups
+      tag: foreach_of_ocsf_process_parent_process_user_groups_02c4ff7d
       if: ctx.ocsf?.process?.parent_process?.user?.groups instanceof List
       field: ocsf.process.parent_process.user.groups
       processor:
         remove:
-          tag: remove_duplicate_custom_fields_from_ocsf_process_parent_process_user_groups_array
+          tag: remove_duplicate_custom_fields_from_ocsf_process_parent_process_user_groups_array_fbe662b6
           if: ctx.tags == null || !(ctx.tags.contains('preserve_duplicate_custom_fields'))
           field:
             - _ingest._value.uid
             - _ingest._value.name
       ignore_failure: true
   - foreach:
-      tag: foreach_of_ocsf_actor_process_parent_process_user_groups
+      tag: foreach_of_ocsf_actor_process_parent_process_user_groups_b96b8bd2
       if: ctx.ocsf?.actor?.process?.parent_process?.user?.groups instanceof List
       field: ocsf.actor.process.parent_process.user.groups
       processor:
         remove:
-          tag: remove_duplicate_custom_fields_from_ocsf_actor_process_parent_process_user_groups_array
+          tag: remove_duplicate_custom_fields_from_ocsf_actor_process_parent_process_user_groups_array_2e1bd82d
           if: ctx.tags == null || !(ctx.tags.contains('preserve_duplicate_custom_fields'))
           field:
             - _ingest._value.uid
             - _ingest._value.name
       ignore_failure: true
   - foreach:
-      tag: foreach_of_ocsf_actor_user_groups
+      tag: foreach_of_ocsf_actor_user_groups_e291b9e6
       if: ctx.ocsf?.actor?.user?.groups instanceof List
       field: ocsf.actor.user.groups
       processor:
         remove:
-          tag: remove_duplicate_custom_fields_from_ocsf_actor_user_groups_array
+          tag: remove_duplicate_custom_fields_from_ocsf_actor_user_groups_array_65a159a9
           if: ctx.tags == null || !(ctx.tags.contains('preserve_duplicate_custom_fields'))
           field:
             - _ingest._value.uid
             - _ingest._value.name
       ignore_failure: true
   - foreach:
-      tag: foreach_of_ocsf_job_user_groups
+      tag: foreach_of_ocsf_job_user_groups_8616b1c2
       if: ctx.ocsf?.job?.user?.groups instanceof List
       field: ocsf.job.user.groups
       processor:
         remove:
-          tag: remove_duplicate_custom_fields_from_ocsf_job_user_groups_array
+          tag: remove_duplicate_custom_fields_from_ocsf_job_user_groups_array_23808e5d
           if: ctx.tags == null || !(ctx.tags.contains('preserve_duplicate_custom_fields'))
           field:
             - _ingest._value.uid
             - _ingest._value.name
       ignore_failure: true
   - foreach:
-      tag: foreach_of_ocsf_user_groups
+      tag: foreach_of_ocsf_user_groups_e2dcf99f
       if: ctx.ocsf?.user?.groups instanceof List
       field: ocsf.user.groups
       processor:
         remove:
-          tag: remove_duplicate_custom_fields_from_ocsf_user_groups_array
+          tag: remove_duplicate_custom_fields_from_ocsf_user_groups_array_6d60f664
           if: ctx.tags == null || !(ctx.tags.contains('preserve_duplicate_custom_fields'))
           field:
             - _ingest._value.uid
             - _ingest._value.name
       ignore_failure: true
   - foreach:
-      tag: foreach_of_ocsf_user_result_groups
+      tag: foreach_of_ocsf_user_result_groups_e2e6f17d
       if: ctx.ocsf?.user_result?.groups instanceof List
       field: ocsf.user_result.groups
       processor:
         remove:
-          tag: remove_duplicate_custom_fields_from_ocsf_user_result_groups_array
+          tag: remove_duplicate_custom_fields_from_ocsf_user_result_groups_array_4b2944b6
           if: ctx.tags == null || !(ctx.tags.contains('preserve_duplicate_custom_fields'))
           field:
             - _ingest._value.uid
             - _ingest._value.name
       ignore_failure: true
   - foreach:
-      tag: foreach_of_ocsf_tls_sans
+      tag: foreach_of_ocsf_tls_sans_232b57aa
       if: ctx.ocsf?.tls?.sans instanceof List
       field: ocsf.tls.sans
       processor:
         remove:
-          tag: remove_duplicate_custom_fields_from_ocsf_tls_sans_array
+          tag: remove_duplicate_custom_fields_from_ocsf_tls_sans_array_c177926c
           if: ctx.tags == null || !(ctx.tags.contains('preserve_duplicate_custom_fields'))
           field:
             - _ingest._value.name
       ignore_failure: true
   - foreach:
-      tag: foreach_of_ocsf_attacks
+      tag: foreach_of_ocsf_attacks_8e08d3be
       if: ctx.ocsf?.attacks instanceof List
       field: ocsf.attacks
       processor:
         remove:
-          tag: remove_duplicate_custom_fields_from_ocsf_attacks_array
+          tag: remove_duplicate_custom_fields_from_ocsf_attacks_array_c45ef489
           if: ctx.tags == null || !(ctx.tags.contains('preserve_duplicate_custom_fields'))
           field:
             - _ingest._value.technique.uid
             - _ingest._value.technique.name
       ignore_failure: true
   - foreach:
-      tag: foreach_of_ocsf_vulnerabilities
+      tag: foreach_of_ocsf_vulnerabilities_3109a12a
       if: ctx.ocsf?.vulnerabilities instanceof List
       field: ocsf.vulnerabilities
       processor:
         remove:
-          tag: remove_duplicate_custom_fields_from_ocsf_vulnerabilities_array
+          tag: remove_duplicate_custom_fields_from_ocsf_vulnerabilities_array_4652ba43
           if: ctx.tags == null || !(ctx.tags.contains('preserve_duplicate_custom_fields'))
           field:
             - _ingest._value.desc
@@ -2071,12 +2083,12 @@ processors:
             - _ingest._value.severity
       ignore_failure: true
   - foreach:
-      tag: foreach_of_ocsf_answers
+      tag: foreach_of_ocsf_answers_74d467ef
       if: ctx.ocsf?.answers instanceof List
       field: ocsf.answers
       processor:
         remove:
-          tag: remove_duplicate_custom_fields_from_ocsf_answers_array
+          tag: remove_duplicate_custom_fields_from_ocsf_answers_array_7b13a5f5
           if: ctx.tags == null || !(ctx.tags.contains('preserve_duplicate_custom_fields'))
           field:
             - _ingest._value.rdata
@@ -2086,12 +2098,12 @@ processors:
             - _ingest._value.ttl
       ignore_failure: true
   - foreach:
-      tag: foreach_of_ocsf_web_resources
+      tag: foreach_of_ocsf_web_resources_62f3d496
       if: ctx.ocsf?.web_resources instanceof List
       field: ocsf.web_resources
       processor:
         remove:
-          tag: remove_duplicate_custom_fields_from_ocsf_web_resources_array
+          tag: remove_duplicate_custom_fields_from_ocsf_web_resources_array_c6e893ed
           if: ctx.tags == null || !(ctx.tags.contains('preserve_duplicate_custom_fields'))
           field:
             - _ingest._value.desc
@@ -2099,12 +2111,12 @@ processors:
             - _ingest._value.type
       ignore_failure: true
   - foreach:
-      tag: foreach_of_ocsf_malware
+      tag: foreach_of_ocsf_malware_93733a8e
       if: ctx.ocsf?.malware instanceof List
       field: ocsf.malware
       processor:
         remove:
-          tag: remove_duplicate_custom_fields_from_ocsf_malware_array
+          tag: remove_duplicate_custom_fields_from_ocsf_malware_array_b5e3e87b
           if: ctx.tags == null || !(ctx.tags.contains('preserve_duplicate_custom_fields'))
           field:
             - _ingest._value.cvss.base_score
@@ -2112,12 +2124,12 @@ processors:
             - _ingest._value.uid
       ignore_failure: true
   - remove:
-      tag: remove_24
+      tag: remove_fd77e56f
       field:
         - aws
       ignore_missing: true
   - remove:
-      tag: remove_25
+      tag: remove_8bd11401
       field:
         - ocsf.time
         - ocsf.cloud.account.uid
@@ -2460,7 +2472,7 @@ processors:
       ignore_missing: true
   - script:
       description: Drops null/empty values recursively.
-      tag: painless_remove_null
+      tag: painless_remove_null_96a37652
       source: |-
         boolean drop(Object object) {
           if (object == null || object == '') {
@@ -2476,71 +2488,71 @@ processors:
         }
         drop(ctx);
   - foreach:
-      tag: foreach_of_dns_answers_ttl
+      tag: foreach_of_dns_answers_ttl_b7bfe3e2
       if: ctx.dns?.answers?.ttl instanceof List
       field: dns.answers.ttl
       processor:
         convert:
-          tag: convert_dns_answers_ttl_to_long
+          tag: convert_dns_answers_ttl_to_long_d5bc1032
           field: _ingest._value
           type: long
           ignore_missing: true
           on_failure:
             - remove:
-                tag: remove_26
+                tag: remove_e6a1f9e6
                 field:
                   - _ingest._value
                 ignore_missing: true
             - append:
-                tag: append_error_message_26
+                tag: append_error_message_99abb022
                 field: error.message
                 value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
       ignore_failure: true
   - foreach:
-      tag: foreach_of_vulnerability_score_base
+      tag: foreach_of_vulnerability_score_base_6be4cc3d
       if: ctx.vulnerability?.score?.base instanceof List
       field: vulnerability.score.base
       processor:
         convert:
-          tag: convert_vulnerability_score_base_to_double
+          tag: convert_vulnerability_score_base_to_double_4bed8a12
           field: _ingest._value
           type: double
           ignore_missing: true
           on_failure:
             - remove:
-                tag: remove_27
+                tag: remove_dfc75a46
                 field:
                   - _ingest._value
                 ignore_missing: true
             - append:
-                tag: append_error_message_27
+                tag: append_error_message_47215082
                 field: error.message
                 value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
       ignore_failure: true
 
   # Error handling.
   - set:
-      tag: set_event_pipeline_2
+      tag: set_event_pipeline_cb65c5ca
       if: ctx.error?.message != null
       field: event.pipeline
       value: pipeline_error
   - append:
-      tag: append_tags_3
+      tag: append_tags_9fe66b2c
       if: ctx.error?.message != null
       field: tags
       value: preserve_original_event
       allow_duplicates: false
 on_failure:
   - set:
-      tag: set_event_pipeline_1
+      tag: set_event_pipeline_02eca99d
       field: event.pipeline
       value: pipeline_error
   - append:
-      tag: append_event_message
+      tag: append_event_message_76a7c311
       field: event.message
       value: 'Processor {{{_ingest.on_failure_processor_type}}} with tag {{{_ingest.on_failure_processor_tag}}} in pipeline {{{_ingest.on_failure_pipeline}}} failed with message: {{{_ingest.on_failure_message}}}'
   - append:
-      tag: append_tags_1
+      tag: append_tags_d762b9c5
       field: tags
       value: preserve_original_event
       allow_duplicates: false

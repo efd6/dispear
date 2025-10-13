@@ -21,11 +21,11 @@ func main() {
 description: convert
 processors:
   - convert:
-      tag: convert_src_to_long
+      tag: convert_src_to_long_d695a96a
       field: src
       type: long
   - convert:
-      tag: convert_src_to_long_into_dst
+      tag: convert_src_to_long_into_dst_dd0d12bb
       field: src
       type: long
       target_field: dst

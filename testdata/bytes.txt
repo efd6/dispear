@@ -20,7 +20,7 @@ func main() {
 description: bytes
 processors:
   - bytes:
-      tag: bytes_src_into_binary
+      tag: bytes_src_into_binary_28c6baea
       field: src
       target_field: binary
       ignore_missing: true

@@ -20,6 +20,6 @@ func main() {
 description: uppercase
 processors:
   - uppercase:
-      tag: uppercase_src_into_dst
+      tag: uppercase_src_into_dst_7c5bba02
       field: src
       target_field: dst

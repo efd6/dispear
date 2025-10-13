@@ -20,9 +20,9 @@ func JSON(dst, src string) *JSONProc {
 	if dst != "" {
 		p.Tag += "_into_" + PathCleaner.Replace(dst)
 	}
+	p.template = jsonTemplate
 	p.parent = p
 	ctx.Add(p)
-	ctx.tags[p.Tag] = append(ctx.tags[p.Tag], &p.shared)
 	return p
 }
 
@@ -69,14 +69,21 @@ func (p *JSONProc) STRICT_JSON_PARSING(t bool) *JSONProc {
 	return p
 }
 
-func (p *JSONProc) Render(dst io.Writer) error {
+func (p *JSONProc) Render(dst io.Writer, notag bool) error {
 	if p.Field == "" {
 		return fmt.Errorf("no src for JSON %s:%d: %s", p.file, p.line, p.Tag)
 	}
-	jsonTemplate := template.Must(template.New("json").Funcs(templateHelpers).Parse(`
+	oldNotag := p.parent.SemanticsOnly
+	p.parent.SemanticsOnly = notag
+	err := p.template.Execute(dst, p)
+	p.parent.SemanticsOnly = oldNotag
+	return err
+}
+
+var jsonTemplate = template.Must(template.New("json").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
 {{end}}- json:` +
-		preamble + `
+	preamble + `
     field: {{yaml_string .Field}}
 {{- with .TargetField}}
     target_field: {{yaml_string .}}
@@ -93,7 +100,5 @@ func (p *JSONProc) Render(dst io.Writer) error {
 {{- with .StrictJSONParsing}}
     strict_json_parsing: {{.}}
 {{- end -}}` +
-		postamble,
-	))
-	return jsonTemplate.Execute(dst, p)
-}
+	postamble,
+))

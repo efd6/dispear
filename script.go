@@ -13,9 +13,9 @@ func SCRIPT() *ScriptProc {
 	p := &ScriptProc{}
 	p.recDecl()
 	p.Tag = "script"
+	p.template = scriptTemplate
 	p.parent = p
 	ctx.Add(p)
-	ctx.tags[p.Tag] = append(ctx.tags[p.Tag], &p.shared)
 	return p
 }
 
@@ -60,16 +60,23 @@ func (p *ScriptProc) LANG(s string) *ScriptProc {
 	return p
 }
 
-func (p *ScriptProc) Render(dst io.Writer) error {
+func (p *ScriptProc) Render(dst io.Writer, notag bool) error {
 	if (p.ScriptID == nil) == (p.Source == nil) {
 		return fmt.Errorf("must have one of id or source for SCRIPT %s:%d: %s", p.file, p.line, p.Tag)
 	}
-	scriptTemplate := template.Must(template.New("script").Funcs(templateHelpers).Funcs(template.FuncMap{
-		"gutter": gutter,
-	}).Parse(`
+	oldNotag := p.parent.SemanticsOnly
+	p.parent.SemanticsOnly = notag
+	err := p.template.Execute(dst, p)
+	p.parent.SemanticsOnly = oldNotag
+	return err
+}
+
+var scriptTemplate = template.Must(template.New("script").Funcs(templateHelpers).Funcs(template.FuncMap{
+	"gutter": gutter,
+}).Parse(`
 {{with .Comment}}{{comment .}}
 {{end}}- script:` +
-		preamble + `
+	preamble + `
 {{- with .Language}}
     lang: {{yaml_string .}}
 {{- end -}}
@@ -82,7 +89,5 @@ func (p *ScriptProc) Render(dst io.Writer) error {
 {{- with .Source}}
 {{gutter . | yaml 4 2 "source"}}
 {{- end -}}` +
-		postamble,
-	))
-	return scriptTemplate.Execute(dst, p)
-}
+	postamble,
+))

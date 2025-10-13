@@ -5,8 +5,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"hash/fnv"
 	"io"
-	"math"
 	"os"
 	"runtime"
 	"slices"
@@ -43,27 +43,33 @@ func Generate() error {
 	return nil
 }
 
-var ctx = Context{tags: make(map[string][]retagger)}
+var ctx = Context{}
 
 // Context holds the state necessary for constructing the pipeline.
 type Context struct {
 	pipeline   pipeline
 	processors []Renderer
-	tags       map[string][]retagger
+	tags       []retagger
 }
 
 // Renderer is the interface required for processor rendering.
 type Renderer interface {
-	Render(dst io.Writer) error
+	Render(dst io.Writer, notag bool) error
 }
 
 type retagger interface {
+	setSemantics() error
+	semantics() *semantic
+	tag() string
 	retag(string)
 }
 
 // Add adds a processor to the context.
 func (c *Context) Add(p Renderer) {
 	c.processors = append(c.processors, p)
+	if r, ok := p.(retagger); ok {
+		c.tags = append(c.tags, r)
+	}
 }
 
 func (c *Context) Generate() error {
@@ -79,18 +85,51 @@ func (c *Context) Generate() error {
 		w = f
 	}
 
-	var buf bytes.Buffer
-	for t, retaggers := range c.tags {
-		if len(retaggers) < 2 {
-			continue
-		}
-		w := int(math.Ceil(math.Log10(float64(len(retaggers) + 1))))
-		for j, r := range retaggers {
-			r.retag(fmt.Sprintf("%s_%0*d", t, w, j+1))
+	// Collect semantics.
+	for _, r := range c.tags {
+		err := r.setSemantics()
+		if err != nil {
+			panic(err)
 		}
 	}
+	// Ensure no collisions.
+	for {
+		tags := make(map[string][]*semantic)
+		for _, r := range c.tags {
+			sem := r.semantics()
+			h := fnv.New32a()
+			h.Write(sem.text())
+			if sem.collision != 0 {
+				fmt.Fprint(h, sem.collision)
+			}
+			sem.hash = fmt.Sprintf("%08x", h.Sum32())
+			k := r.tag() + "_" + sem.hash
+			tags[k] = append(tags[k], sem)
+		}
+		var collision bool
+		for _, retaggers := range tags {
+			if len(retaggers) < 2 {
+				continue
+			}
+			collision = true
+			for j, r := range retaggers {
+				r.collision += j + 1
+			}
+		}
+		if !collision {
+			break
+		}
+	}
+	// Write out tags.
+	for _, r := range c.tags {
+		sem := r.semantics()
+		tag := r.tag() + "_" + sem.hash
+		r.retag(tag)
+	}
+
+	var buf bytes.Buffer
 	for _, p := range c.processors {
-		err := p.Render(&buf)
+		err := p.Render(&buf, false)
 		if err != nil {
 			return err
 		}
@@ -98,9 +137,9 @@ func (c *Context) Generate() error {
 	pipelineTemplate := template.Must(template.New("pipeline").Funcs(template.FuncMap{
 		"yaml":        yamlValue,
 		"yaml_string": yamlString,
-		"render": func(r Renderer) (string, error) {
+		"render": func(r Renderer, notag bool) (string, error) {
 			var buf bytes.Buffer
-			err := r.Render(&buf)
+			err := r.Render(&buf, notag)
 			if err != nil {
 				return "", err
 			}
@@ -120,7 +159,7 @@ processors:
 {{- $procs -}}
 {{- with .ErrorHandler}}
 on_failure:{{range .}}
-{{render .}}{{end}}
+{{render . .SemanticsOnly}}{{end}}
 {{- end -}}
 {{end}}
 `))
@@ -137,9 +176,9 @@ var templateHelpers = template.FuncMap{
 	"gutter":      gutter,
 	"yaml":        yamlValue,
 	"yaml_string": yamlString,
-	"render": func(r Renderer) (string, error) {
+	"render": func(r Renderer, notag bool) (string, error) {
 		var buf bytes.Buffer
-		err := r.Render(&buf)
+		err := r.Render(&buf, notag)
 		if err != nil {
 			return "", err
 		}
@@ -215,7 +254,7 @@ func (b *Blank) COMMENT(s string) *Blank {
 	return b
 }
 
-func (p *Blank) Render(dst io.Writer) error {
+func (p *Blank) Render(dst io.Writer, _ bool) error {
 	var err error
 	if p.Comment != nil {
 		text := "\n# " + strings.Join(strings.Split(*p.Comment, "\n"), "\n# ")
@@ -243,6 +282,29 @@ type shared[P Renderer] struct {
 
 	file string
 	line int
+
+	template *template.Template
+
+	SemanticsOnly bool // SemanticsOnly is used to obtain the processor hash.
+	semantic      *semantic
+}
+
+type semantic struct {
+	owner     *semantic
+	data      []byte
+	collision int
+	hash      string
+}
+
+func (s *semantic) text() []byte {
+	var text []byte
+	if s.owner != nil {
+		text = s.owner.text()
+	}
+	if text != nil {
+		text = append(bytes.Clone(text), '\n')
+	}
+	return append(text, s.data...)
 }
 
 const (
@@ -250,8 +312,10 @@ const (
 {{- with .Description}}
     description: {{yaml_string .}}
 {{- end -}}
+{{- if not .SemanticsOnly -}}
 {{- with .Tag}}
     tag: {{.}}
+{{- end -}}
 {{- end -}}
 {{- with .Condition}}
 {{gutter . | yaml 4 2 "if"}}
@@ -263,7 +327,7 @@ const (
 {{- end -}}
 {{- with .ErrorHandler}}
     on_failure:{{range .}}
-{{render .}}{{end}}
+{{render . .SemanticsOnly}}{{end}}
 {{- end -}}`
 )
 
@@ -293,8 +357,8 @@ func (p *shared[P]) COMMENT(s string) P {
 	return p.parent
 }
 
-// TAG sets the tag field of the processor. If the tag is not unique in the
-// pipeline, it will have a numeric suffix added to make it unique.
+// TAG sets the tag field of the processor. The final tag will have a short
+// hash appended to ensure uniqueness.
 func (p *shared[P]) TAG(s string) P {
 	if p.tagCalled {
 		panic("multiple TAG calls")
@@ -305,13 +369,20 @@ func (p *shared[P]) TAG(s string) P {
 		return p.parent
 	}
 	if s != "" {
-		ctx.tags[p.Tag] = slices.DeleteFunc(ctx.tags[p.Tag], func(e retagger) bool {
-			return e == p
-		})
 		p.Tag = s
-		ctx.tags[s] = append(ctx.tags[s], p)
 	}
 	return p.parent
+}
+
+func (p *shared[P]) semantics() *semantic {
+	if p.semantic == nil {
+		p.semantic = &semantic{}
+	}
+	return p.semantic
+}
+
+func (p *shared[P]) tag() string {
+	return p.Tag
 }
 
 func (p *shared[P]) retag(s string) {
@@ -351,6 +422,9 @@ func (p *shared[P]) ON_FAILURE(h ...Renderer) P {
 		ctx.processors = slices.DeleteFunc(ctx.processors, func(e Renderer) bool {
 			return h[i] == e
 		})
+		if r, ok := h[i].(retagger); ok {
+			r.semantics().owner = p.semantics()
+		}
 	}
 	return p.parent
 }

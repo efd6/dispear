@@ -20,9 +20,9 @@ func USER_AGENT(dst, src string) *UserAgentProc {
 	if dst != "" {
 		p.Tag += "_into_" + PathCleaner.Replace(dst)
 	}
+	p.template = userAgentTemplate
 	p.parent = p
 	ctx.Add(p)
-	ctx.tags[p.Tag] = append(ctx.tags[p.Tag], &p.shared)
 	return p
 }
 
@@ -69,14 +69,21 @@ func (p *UserAgentProc) PROPERTIES(s ...string) *UserAgentProc {
 	return p
 }
 
-func (p *UserAgentProc) Render(dst io.Writer) error {
+func (p *UserAgentProc) Render(dst io.Writer, notag bool) error {
 	if p.Field == "" {
 		return fmt.Errorf("no src for USER_AGENT %s:%d: %s", p.file, p.line, p.Tag)
 	}
-	userAgentTemplate := template.Must(template.New("user_agent").Funcs(templateHelpers).Parse(`
+	oldNotag := p.parent.SemanticsOnly
+	p.parent.SemanticsOnly = notag
+	err := p.template.Execute(dst, p)
+	p.parent.SemanticsOnly = oldNotag
+	return err
+}
+
+var userAgentTemplate = template.Must(template.New("user_agent").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
 {{end}}- user_agent:` +
-		preamble + `
+	preamble + `
     field: {{yaml_string .Field}}
 {{- with .TargetField}}
     target_field: {{yaml_string .}}
@@ -94,7 +101,5 @@ func (p *UserAgentProc) Render(dst io.Writer) error {
 {{- with .IgnoreMissing}}
     ignore_missing: {{.}}
 {{- end -}}` +
-		postamble,
-	))
-	return userAgentTemplate.Execute(dst, p)
-}
+	postamble,
+))

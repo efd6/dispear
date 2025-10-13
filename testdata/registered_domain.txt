@@ -20,6 +20,6 @@ func main() {
 description: registered_domain
 processors:
   - registered_domain:
-      tag: registered_domain_src_into_dst
+      tag: registered_domain_src_into_dst_f71ae561
       field: src
       target_field: dst

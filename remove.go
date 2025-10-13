@@ -14,9 +14,9 @@ func REMOVE(fields ...string) *RemoveProc {
 	p := &RemoveProc{Fields: fields}
 	p.recDecl()
 	p.Tag = "remove"
+	p.template = removeTemplate
 	p.parent = p
 	ctx.Add(p)
-	ctx.tags[p.Tag] = append(ctx.tags[p.Tag], &p.shared)
 	return p
 }
 
@@ -44,7 +44,7 @@ func (p *RemoveProc) IGNORE_MISSING(t bool) *RemoveProc {
 	return p
 }
 
-func (p *RemoveProc) Render(dst io.Writer) error {
+func (p *RemoveProc) Render(dst io.Writer, notag bool) error {
 	if len(p.Fields) == 0 && len(p.Keep) == 0 {
 		return fmt.Errorf("no field or keep for REMOVE %s:%d: %s", p.file, p.line, p.Tag)
 	}
@@ -54,10 +54,17 @@ func (p *RemoveProc) Render(dst io.Writer) error {
 	if slices.Contains(p.Keep, "") {
 		return fmt.Errorf("empty keep element for REMOVE %s:%d: %s", p.file, p.line, p.Tag)
 	}
-	removeTemplate := template.Must(template.New("remove").Funcs(templateHelpers).Parse(`
+	oldNotag := p.parent.SemanticsOnly
+	p.parent.SemanticsOnly = notag
+	err := p.template.Execute(dst, p)
+	p.parent.SemanticsOnly = oldNotag
+	return err
+}
+
+var removeTemplate = template.Must(template.New("remove").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
 {{end}}- remove:` +
-		preamble + `
+	preamble + `
 {{- with .Fields}}
     field:{{range .}}
       - {{yaml_string .}}{{end}}
@@ -69,7 +76,5 @@ func (p *RemoveProc) Render(dst io.Writer) error {
 {{- with .IgnoreMissing}}
     ignore_missing: {{.}}
 {{- end -}}` +
-		postamble,
-	))
-	return removeTemplate.Execute(dst, p)
-}
+	postamble,
+))

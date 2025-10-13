@@ -23,15 +23,15 @@ func main() {
 description: reroute
 processors:
   - reroute:
-      tag: reroute_to_ns_ds
+      tag: reroute_to_ns_ds_5bfc7d00
       namespace: ns
       dataset: ds
   - reroute:
-      tag: reroute_to_ns
+      tag: reroute_to_ns_170927d9
       namespace: ns
   - reroute:
-      tag: reroute_to_ds
+      tag: reroute_to_ds_3ded221c
       dataset: ds
   - reroute:
-      tag: reroute_to_dst
+      tag: reroute_to_dst_0d5ebc88
       destination: dst

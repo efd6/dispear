@@ -20,7 +20,7 @@ func main() {
 description: attachment
 processors:
   - attachment:
-      tag: attachment_src
+      tag: attachment_src_90fa6ee0
       field: src
       properties:
         - content

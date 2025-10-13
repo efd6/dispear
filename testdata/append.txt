@@ -27,27 +27,27 @@ func main() {
 description: append
 processors:
   - append:
-      tag: append_dst_1
+      tag: append_dst_21b68fd2
       field: dst
       value: val
   - append:
-      tag: append_dst_2
+      tag: append_dst_b3452fe8
       field: dst
       value: 1
   - append:
-      tag: append_dst_3
+      tag: append_dst_c32611cd
       field: dst
       value: 1.5
   - append:
-      tag: append_dst_4
+      tag: append_dst_79aa5be5
       field: dst
       value: true
   - append:
-      tag: append_dst_5
+      tag: append_dst_9a731bbc
       field: dst
       value: false
   - append:
-      tag: append_dst_6
+      tag: append_dst_6a627252
       field: dst
       value:
         - 1

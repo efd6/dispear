@@ -20,5 +20,5 @@ func main() {
 description: html_strip
 processors:
   - html_strip:
-      tag: html_strip_src
+      tag: html_strip_src_cc969a95
       field: src
