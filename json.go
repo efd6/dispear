@@ -37,6 +37,8 @@ type JSONProc struct {
 	StrictJSONParsing         *bool
 }
 
+func (p *JSONProc) Name() string { return "json" }
+
 func (p *JSONProc) ADD_TO_ROOT(t bool) *JSONProc {
 	if p.AddToRoot != nil {
 		panic("multiple ADD_TO_ROOT calls")
@@ -82,7 +84,7 @@ func (p *JSONProc) Render(dst io.Writer, notag bool) error {
 
 var jsonTemplate = template.Must(template.New("json").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
-{{end}}- json:` +
+{{end}}- {{.Name}}:` +
 	preamble + `
     field: {{yaml_string .Field}}
 {{- with .TargetField}}

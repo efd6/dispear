@@ -34,6 +34,8 @@ type UppercaseProc struct {
 	IgnoreMissing *bool
 }
 
+func (p *UppercaseProc) Name() string { return "uppercase" }
+
 func (p *UppercaseProc) IGNORE_MISSING(t bool) *UppercaseProc {
 	if p.IgnoreMissing != nil {
 		panic("multiple IGNORE_MISSING calls")
@@ -55,7 +57,7 @@ func (p *UppercaseProc) Render(dst io.Writer, notag bool) error {
 
 var uppercaseTemplate = template.Must(template.New("uppercase").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
-{{end}}- uppercase:` +
+{{end}}- {{.Name}}:` +
 	preamble + `
     field: {{yaml_string .Field}}
 {{- with .TargetField}}

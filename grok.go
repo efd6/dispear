@@ -31,6 +31,8 @@ type GrokProc struct {
 	TraceMatch         *bool
 }
 
+func (p *GrokProc) Name() string { return "grok" }
+
 func (p *GrokProc) IGNORE_MISSING(t bool) *GrokProc {
 	if p.IgnoreMissing != nil {
 		panic("multiple IGNORE_MISSING calls")
@@ -85,7 +87,7 @@ func (p *GrokProc) Render(dst io.Writer, notag bool) error {
 
 var grokTemplate = template.Must(template.New("grok").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
-{{end}}- grok:` +
+{{end}}- {{.Name}}:` +
 	preamble + `
     field: {{yaml_string .Field}}
 {{- with .Patterns}}

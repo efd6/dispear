@@ -36,6 +36,8 @@ type URIPartsProc struct {
 	IgnoreMissing      *bool
 }
 
+func (p *URIPartsProc) Name() string { return "uri_parts" }
+
 func (p *URIPartsProc) KEEP_ORIGINAL(t bool) *URIPartsProc {
 	if p.KeepOriginal != nil {
 		panic("multiple KEEP_ORIGINAL calls")
@@ -73,7 +75,7 @@ func (p *URIPartsProc) Render(dst io.Writer, notag bool) error {
 
 var uriPartsTemplate = template.Must(template.New("uri_parts").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
-{{end}}- uri_parts:` +
+{{end}}- {{.Name}}:` +
 	preamble + `
     field: {{yaml_string .Field}}
 {{- with .TargetField}}

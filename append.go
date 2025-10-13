@@ -28,6 +28,8 @@ type AppendProc struct {
 	MediaType       *string
 }
 
+func (p *AppendProc) Name() string { return "append" }
+
 func (p *AppendProc) ALLOW_DUPLICATES(t bool) *AppendProc {
 	if p.AllowDuplicates != nil {
 		panic("multiple ALLOW_DUPLICATES calls")
@@ -57,7 +59,7 @@ func (p *AppendProc) Render(dst io.Writer, notag bool) error {
 
 var appendTemplate = template.Must(template.New("append").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
-{{end}}- append:` +
+{{end}}- {{.Name}}:` +
 	preamble + `
     field: {{yaml_string .Field}}
 {{yaml 4 2 "value" .Value}}

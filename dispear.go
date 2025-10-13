@@ -325,9 +325,14 @@ const (
 {{- with .IgnoreFailure}}
     ignore_failure: {{.}}
 {{- end -}}
-{{- with .ErrorHandler}}
-    on_failure:{{range .}}
-{{render . .SemanticsOnly}}{{end}}
+{{- if .ErrorHandler}}
+    on_failure:
+{{- if .SemanticsOnly}} {}
+{{- else -}}
+{{- range .ErrorHandler}}
+{{render . .SemanticsOnly -}}
+{{- end -}}
+{{- end}}
 {{- end -}}`
 )
 

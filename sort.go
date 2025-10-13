@@ -40,6 +40,8 @@ type SortProc struct {
 	Order       *string
 }
 
+func (p *SortProc) Name() string { return "sort" }
+
 func (p *SortProc) Render(dst io.Writer, notag bool) error {
 	if p.Field == "" {
 		return fmt.Errorf("no src for SORT %s:%d: %s", p.file, p.line, p.Tag)
@@ -53,7 +55,7 @@ func (p *SortProc) Render(dst io.Writer, notag bool) error {
 
 var sortTemplate = template.Must(template.New("sort").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
-{{end}}- sort:` +
+{{end}}- {{.Name}}:` +
 	preamble + `
     field: {{yaml_string .Field}}
 {{- with .TargetField}}

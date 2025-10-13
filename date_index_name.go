@@ -32,6 +32,8 @@ type DateIndexNameProc struct {
 	Separator       *string
 }
 
+func (p *DateIndexNameProc) Name() string { return "date_index_name" }
+
 func (p *DateIndexNameProc) DATE_FORMATS(s ...string) *DateIndexNameProc {
 	if p.Formats != nil {
 		panic("multiple DATE_FORMATS calls")
@@ -88,7 +90,7 @@ func (p *DateIndexNameProc) Render(dst io.Writer, notag bool) error {
 
 var dateIndexNameTemplate = template.Must(template.New("date_index_name").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
-{{end}}- date_index_name:` +
+{{end}}- {{.Name}}:` +
 	preamble + `
     field: {{yaml_string .Field}}
     date_rounding: {{yaml_string .Rounding}}

@@ -13,7 +13,7 @@ import (
 //
 // See https://www.elastic.co/guide/en/elasticsearch/reference/current/pipeline-processor.html.
 func PIPELINE(name string) *PipelineProc {
-	p := &PipelineProc{Name: name}
+	p := &PipelineProc{PipelineName: name}
 	p.recDecl()
 	p.Tag = "pipeline_" + PathCleaner.Replace(name)
 	p.template = pipelineTemplate
@@ -25,9 +25,11 @@ func PIPELINE(name string) *PipelineProc {
 type PipelineProc struct {
 	shared[*PipelineProc]
 
-	Name          string
+	PipelineName  string
 	IgnoreMissing *bool
 }
+
+func (p *PipelineProc) Name() string { return "pipeline" }
 
 func (p *PipelineProc) IGNORE_MISSING(t bool) *PipelineProc {
 	if p.IgnoreMissing != nil {
@@ -38,7 +40,7 @@ func (p *PipelineProc) IGNORE_MISSING(t bool) *PipelineProc {
 }
 
 func (p *PipelineProc) Render(dst io.Writer, notag bool) error {
-	if p.Name == "" {
+	if p.PipelineName == "" {
 		return fmt.Errorf("no name for PIPELINE %s:%d: %s", p.file, p.line, p.Tag)
 	}
 	oldNotag := p.parent.SemanticsOnly
@@ -67,9 +69,9 @@ var pipelineTemplate = template.Must(template.New("pipeline").Funcs(template.Fun
 	"right_braces": func() string { return "}}" },
 }).Parse(`
 {{with .Comment}}{{comment .}}
-{{end}}- pipeline:` +
+{{end}}- {{.Name}}:` +
 	preamble + `
-    name: '{{left_braces}} IngestPipeline "{{.Name}}" {{right_braces}}'
+    name: '{{left_braces}} IngestPipeline "{{.PipelineName}}" {{right_braces}}'
 {{- with .IgnoreMissing}}
     ignore_missing_pipeline: {{.}}
 {{- end -}}` +

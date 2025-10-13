@@ -27,6 +27,8 @@ type DotExpanderProc struct {
 	Override *bool
 }
 
+func (p *DotExpanderProc) Name() string { return "dot_expander" }
+
 func (p *DotExpanderProc) PATH(s string) *DotExpanderProc {
 	if p.Path != nil {
 		panic("multiple PATH calls")
@@ -56,7 +58,7 @@ func (p *DotExpanderProc) Render(dst io.Writer, notag bool) error {
 
 var dotExpanderTemplate = template.Must(template.New("dot_expander").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
-{{end}}- dot_expander:` +
+{{end}}- {{.Name}}:` +
 	preamble + `
     field: {{yaml_string .Field}}
 {{- with .Path}}

@@ -28,6 +28,8 @@ type RemoveProc struct {
 	IgnoreMissing *bool
 }
 
+func (p *RemoveProc) Name() string { return "remove" }
+
 func (p *RemoveProc) KEEP(fields ...string) *RemoveProc {
 	if p.Keep != nil {
 		panic("multiple KEEP calls")
@@ -63,7 +65,7 @@ func (p *RemoveProc) Render(dst io.Writer, notag bool) error {
 
 var removeTemplate = template.Must(template.New("remove").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
-{{end}}- remove:` +
+{{end}}- {{.Name}}:` +
 	preamble + `
 {{- with .Fields}}
     field:{{range .}}

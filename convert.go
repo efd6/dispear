@@ -38,6 +38,8 @@ type ConvertProc struct {
 	IgnoreMissing *bool
 }
 
+func (p *ConvertProc) Name() string { return "convert" }
+
 func (p *ConvertProc) IGNORE_MISSING(t bool) *ConvertProc {
 	if p.IgnoreMissing != nil {
 		panic("multiple IGNORE_MISSING calls")

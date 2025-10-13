@@ -31,6 +31,8 @@ type EnrichProc struct {
 	ShapeRelation *string
 }
 
+func (p *EnrichProc) Name() string { return "enrich" }
+
 func (p *EnrichProc) MAX_MATCHES(n int) *EnrichProc {
 	if p.MaxMatches != nil {
 		panic("multiple MAX_MATCHES calls")
@@ -87,7 +89,7 @@ func (p *EnrichProc) Render(dst io.Writer, notag bool) error {
 
 var enrichTemplate = template.Must(template.New("enrich").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
-{{end}}- enrich:` +
+{{end}}- {{.Name}}:` +
 	preamble + `
     field: {{yaml_string .Field}}
     target_field: {{yaml_string .TargetField}}

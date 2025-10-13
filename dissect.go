@@ -28,6 +28,8 @@ type DissectProc struct {
 	IgnoreMissing   *bool
 }
 
+func (p *DissectProc) Name() string { return "dissect" }
+
 func (p *DissectProc) APPEND_SEPARATOR(s string) *DissectProc {
 	if p.AppendSeparator != nil {
 		panic("multiple APPEND_SEPARATOR calls")

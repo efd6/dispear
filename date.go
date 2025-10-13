@@ -37,6 +37,8 @@ type DateProc struct {
 	Timezone     *string
 }
 
+func (p *DateProc) Name() string { return "date" }
+
 func (p *DateProc) LOCALE(s string) *DateProc {
 	if p.Locale != nil {
 		panic("multiple LOCALE calls")
@@ -77,7 +79,7 @@ func (p *DateProc) Render(dst io.Writer, notag bool) error {
 
 var dateTemplate = template.Must(template.New("date").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
-{{end}}- date:` +
+{{end}}- {{.Name}}:` +
 	preamble + `
     field: {{yaml_string .Field}}
 {{- with .TargetField}}

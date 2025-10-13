@@ -39,6 +39,8 @@ type ForeachProc struct {
 	IgnoreMissing *bool
 }
 
+func (p *ForeachProc) Name() string { return "foreach" }
+
 func (p *ForeachProc) IGNORE_MISSING(t bool) *ForeachProc {
 	if p.IgnoreMissing != nil {
 		panic("multiple IGNORE_MISSING calls")
@@ -74,11 +76,11 @@ var foreachTemplate = template.Must(template.New("foreach").Funcs(templateHelper
 	},
 }).Parse(`
 {{with .Comment}}{{comment .}}
-{{end}}- foreach:` +
+{{end}}- {{.Name}}:` +
 	preamble + `
     field: {{yaml_string .Field}}
     processor:
-{{render .Processor .SemanticsOnly}}
+{{if .SemanticsOnly}}      {{.Processor.Name}}: {}{{else}}{{render .Processor .SemanticsOnly}}{{end}}
 {{- with .IgnoreMissing}}
     ignore_missing: {{.}}
 {{- end -}}` +

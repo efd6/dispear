@@ -42,6 +42,8 @@ type NetworkDirectionProc struct {
 	IgnoreMissing         *bool
 }
 
+func (p *NetworkDirectionProc) Name() string { return "network_direction" }
+
 func (p *NetworkDirectionProc) INTERNAL_NETWORKS_FIELD(s string) *NetworkDirectionProc {
 	if p.InternalNetworksField != nil {
 		panic("multiple INTERNAL_NETWORKS_FIELD calls")
@@ -76,7 +78,7 @@ func (p *NetworkDirectionProc) Render(dst io.Writer, notag bool) error {
 
 var networkDirectionTemplate = template.Must(template.New("network_direction").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
-{{end}}- network_direction:` +
+{{end}}- {{.Name}}:` +
 	preamble + `
 {{- with .TargetField}}
     target_field: {{yaml_string .}}

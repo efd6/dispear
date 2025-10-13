@@ -34,6 +34,8 @@ type RegisteredDomainProc struct {
 	IgnoreMissing *bool
 }
 
+func (p *RegisteredDomainProc) Name() string { return "registered_domain" }
+
 func (p *RegisteredDomainProc) IGNORE_MISSING(t bool) *RegisteredDomainProc {
 	if p.IgnoreMissing != nil {
 		panic("multiple IGNORE_MISSING calls")
@@ -55,7 +57,7 @@ func (p *RegisteredDomainProc) Render(dst io.Writer, notag bool) error {
 
 var registeredDomainTemplate = template.Must(template.New("registered_domain").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
-{{end}}- registered_domain:` +
+{{end}}- {{.Name}}:` +
 	preamble + `
     field: {{yaml_string .Field}}
 {{- with .TargetField}}

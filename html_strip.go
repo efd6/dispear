@@ -34,6 +34,8 @@ type HTMLStripProc struct {
 	IgnoreMissing *bool
 }
 
+func (p *HTMLStripProc) Name() string { return "html_strip" }
+
 func (p *HTMLStripProc) IGNORE_MISSING(t bool) *HTMLStripProc {
 	if p.IgnoreMissing != nil {
 		panic("multiple IGNORE_MISSING calls")
@@ -55,7 +57,7 @@ func (p *HTMLStripProc) Render(dst io.Writer, notag bool) error {
 
 var htmlStripTemplate = template.Must(template.New("html_strip").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
-{{end}}- html_strip:` +
+{{end}}- {{.Name}}:` +
 	preamble + `
     field: {{yaml_string .Field}}
 {{- with .TargetField}}

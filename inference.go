@@ -38,6 +38,8 @@ type InferenceProc struct {
 	IgnoreMissing *bool
 }
 
+func (p *InferenceProc) Name() string { return "inference" }
+
 func (p *InferenceProc) INPUT_OUTPUT(m map[string]string) *InferenceProc {
 	if p.InputOutput != nil {
 		panic("multiple INPUT_OUTPUT calls")
@@ -98,7 +100,7 @@ func (p *InferenceProc) Render(dst io.Writer, notag bool) error {
 
 var inferenceTemplate = template.Must(template.New("inference").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
-{{end}}- inference:` +
+{{end}}- {{.Name}}:` +
 	preamble + `
     model_id: {{yaml_string .ModelID}}
 {{- with .TargetField}}

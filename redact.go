@@ -33,6 +33,8 @@ type RedactProc struct {
 	TraceRedact        *bool
 }
 
+func (p *RedactProc) Name() string { return "redact" }
+
 func (p *RedactProc) IGNORE_MISSING(t bool) *RedactProc {
 	if p.IgnoreMissing != nil {
 		panic("multiple IGNORE_MISSING calls")
@@ -103,7 +105,7 @@ func (p *RedactProc) Render(dst io.Writer, notag bool) error {
 
 var redactTemplate = template.Must(template.New("redact").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
-{{end}}- redact:` +
+{{end}}- {{.Name}}:` +
 	preamble + `
     field: {{yaml_string .Field}}
 {{- with .Patterns}}

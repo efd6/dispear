@@ -34,6 +34,8 @@ type URLDecodeProc struct {
 	IgnoreMissing *bool
 }
 
+func (p *URLDecodeProc) Name() string { return "urldecode" }
+
 func (p *URLDecodeProc) IGNORE_MISSING(t bool) *URLDecodeProc {
 	if p.IgnoreMissing != nil {
 		panic("multiple IGNORE_MISSING calls")
@@ -55,7 +57,7 @@ func (p *URLDecodeProc) Render(dst io.Writer, notag bool) error {
 
 var urlDecodeTemplate = template.Must(template.New("url_decode").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
-{{end}}- urldecode:` +
+{{end}}- {{.Name}}:` +
 	preamble + `
     field: {{yaml_string .Field}}
 {{- with .TargetField}}

@@ -22,10 +22,10 @@ func main() {
 description: foreach
 processors:
   - foreach:
-      tag: foreach_of_src_6a31db78
+      tag: foreach_of_src_6cbd569d
       field: src
       processor:
         append:
-          tag: append_dst_8878c5fb
+          tag: append_dst_c0ce1e2e
           field: dst
           value: '{{{_ingest._value}}}'

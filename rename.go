@@ -28,6 +28,8 @@ type RenameProc struct {
 	IgnoreMissing *bool
 }
 
+func (p *RenameProc) Name() string { return "rename" }
+
 func (p *RenameProc) IGNORE_MISSING(t bool) *RenameProc {
 	if p.IgnoreMissing != nil {
 		panic("multiple IGNORE_MISSING calls")
@@ -60,7 +62,7 @@ func (p *RenameProc) Render(dst io.Writer, notag bool) error {
 
 var renameTemplate = template.Must(template.New("rename").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
-{{end}}- rename:` +
+{{end}}- {{.Name}}:` +
 	preamble + `
     field: {{yaml_string .Field}}
     target_field: {{yaml_string .TargetField}}

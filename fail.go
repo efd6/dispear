@@ -25,6 +25,8 @@ type FailProc struct {
 	Message string
 }
 
+func (p *FailProc) Name() string { return "fail" }
+
 func (p *FailProc) Render(dst io.Writer, notag bool) error {
 	if p.Message == "" {
 		return fmt.Errorf("no message for FAIL: %s", p.Tag)
@@ -38,7 +40,7 @@ func (p *FailProc) Render(dst io.Writer, notag bool) error {
 
 var failTemplate = template.Must(template.New("fail").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
-{{end}}- fail:` +
+{{end}}- {{.Name}}:` +
 	preamble + `
     message: {{yaml_string .Message}}` +
 	postamble,

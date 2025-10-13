@@ -41,6 +41,8 @@ type CircleProc struct {
 	ErrorDistance float64
 }
 
+func (p *CircleProc) Name() string { return "circle" }
+
 func (p *CircleProc) IGNORE_MISSING(t bool) *CircleProc {
 	if p.IgnoreMissing != nil {
 		panic("multiple IGNORE_MISSING calls")
@@ -62,7 +64,7 @@ func (p *CircleProc) Render(dst io.Writer, notag bool) error {
 
 var circleTemplate = template.Must(template.New("circle").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
-{{end}}- circle:` +
+{{end}}- {{.Name}}:` +
 	preamble + `
     field: {{yaml_string .Field}}
 {{- with .TargetField}}

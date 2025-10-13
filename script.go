@@ -28,6 +28,8 @@ type ScriptProc struct {
 	Params   map[string]any
 }
 
+func (p *ScriptProc) Name() string { return "script" }
+
 func (p *ScriptProc) ID(s string) *ScriptProc {
 	if p.ScriptID != nil {
 		panic("multiple ID calls")
@@ -75,7 +77,7 @@ var scriptTemplate = template.Must(template.New("script").Funcs(templateHelpers)
 	"gutter": gutter,
 }).Parse(`
 {{with .Comment}}{{comment .}}
-{{end}}- script:` +
+{{end}}- {{.Name}}:` +
 	preamble + `
 {{- with .Language}}
     lang: {{yaml_string .}}

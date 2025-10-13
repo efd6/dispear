@@ -50,6 +50,8 @@ type RerouteProc struct {
 	Destination *string
 }
 
+func (p *RerouteProc) Name() string { return "reroute" }
+
 func (p *RerouteProc) Render(dst io.Writer, notag bool) error {
 	if (p.Destination != nil) == (p.Namespace != nil || p.Dataset != nil) {
 		return fmt.Errorf("no destination provided with namespace or dataset for REROUTE %s:%d: %s", p.file, p.line, p.Tag)
@@ -69,7 +71,7 @@ func (p *RerouteProc) Render(dst io.Writer, notag bool) error {
 
 var rerouteTemplate = template.Must(template.New("reroute").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
-{{end}}- reroute:` +
+{{end}}- {{.Name}}:` +
 	preamble + `
 {{- with .Namespace}}
     namespace: {{yaml_string .}}

@@ -34,6 +34,8 @@ type LowercaseProc struct {
 	IgnoreMissing *bool
 }
 
+func (p *LowercaseProc) Name() string { return "lowercase" }
+
 func (p *LowercaseProc) IGNORE_MISSING(t bool) *LowercaseProc {
 	if p.IgnoreMissing != nil {
 		panic("multiple IGNORE_MISSING calls")
@@ -55,7 +57,7 @@ func (p *LowercaseProc) Render(dst io.Writer, notag bool) error {
 
 var lowercaseTemplate = template.Must(template.New("lowercase").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
-{{end}}- lowercase:` +
+{{end}}- {{.Name}}:` +
 	preamble + `
     field: {{yaml_string .Field}}
 {{- with .TargetField}}

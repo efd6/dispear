@@ -31,6 +31,8 @@ type CSVProc struct {
 	IgnoreMissing *bool
 }
 
+func (p *CSVProc) Name() string { return "csv" }
+
 func (p *CSVProc) EMPTY_VALUE(s string) *CSVProc {
 	if p.EmptyValue != nil {
 		panic("multiple EMPTY_VALUE calls")
@@ -87,7 +89,7 @@ func (p *CSVProc) Render(dst io.Writer, notag bool) error {
 
 var csvTemplate = template.Must(template.New("csv").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
-{{end}}- csv:` +
+{{end}}- {{.Name}}:` +
 	preamble + `
     field: {{yaml_string .Field}}
     target_field: {{yaml_string .TargetField}}

@@ -36,6 +36,8 @@ type GsubProc struct {
 	IgnoreMissing *bool
 }
 
+func (p *GsubProc) Name() string { return "gsub" }
+
 func (p *GsubProc) IGNORE_MISSING(t bool) *GsubProc {
 	if p.IgnoreMissing != nil {
 		panic("multiple IGNORE_MISSING calls")
@@ -57,7 +59,7 @@ func (p *GsubProc) Render(dst io.Writer, notag bool) error {
 
 var gsubTemplate = template.Must(template.New("gsub").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
-{{end}}- gsub:` +
+{{end}}- {{.Name}}:` +
 	preamble + `
     field: {{yaml_string .Field}}
 {{- with .TargetField}}

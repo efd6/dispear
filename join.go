@@ -34,6 +34,8 @@ type JoinProc struct {
 	TargetField *string
 }
 
+func (p *JoinProc) Name() string { return "join" }
+
 func (p *JoinProc) Render(dst io.Writer, notag bool) error {
 	if p.Field == "" {
 		return fmt.Errorf("no src for JOIN %s:%d: %s", p.file, p.line, p.Tag)
@@ -50,7 +52,7 @@ func (p *JoinProc) Render(dst io.Writer, notag bool) error {
 
 var joinTemplate = template.Must(template.New("join").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
-{{end}}- join:` +
+{{end}}- {{.Name}}:` +
 	preamble + `
     field: {{yaml_string .Field}}
     separator: {{yaml_string .Separator}}

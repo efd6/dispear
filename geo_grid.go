@@ -40,6 +40,8 @@ type GeoGridProc struct {
 	TargetFormat     *string
 }
 
+func (p *GeoGridProc) Name() string { return "geo_grid" }
+
 func (p *GeoGridProc) IGNORE_MISSING(t bool) *GeoGridProc {
 	if p.IgnoreMissing != nil {
 		panic("multiple IGNORE_MISSING calls")
@@ -104,7 +106,7 @@ func (p *GeoGridProc) Render(dst io.Writer, notag bool) error {
 
 var geoGridTemplate = template.Must(template.New("geo_grid").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
-{{end}}- geo_grid:` +
+{{end}}- {{.Name}}:` +
 	preamble + `
     field: {{yaml_string .Field}}
     tile_type: {{yaml_string .TileType}}

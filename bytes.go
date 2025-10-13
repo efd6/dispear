@@ -34,6 +34,8 @@ type BytesProc struct {
 	IgnoreMissing *bool
 }
 
+func (p *BytesProc) Name() string { return "bytes" }
+
 func (p *BytesProc) IGNORE_MISSING(t bool) *BytesProc {
 	if p.IgnoreMissing != nil {
 		panic("multiple IGNORE_MISSING calls")
@@ -55,7 +57,7 @@ func (p *BytesProc) Render(dst io.Writer, notag bool) error {
 
 var bytesTemplate = template.Must(template.New("bytes").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
-{{end}}- bytes:` +
+{{end}}- {{.Name}}:` +
 	preamble + `
     field: {{yaml_string .Field}}
 {{- with .TargetField}}

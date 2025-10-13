@@ -40,6 +40,8 @@ type AttachmentProc struct {
 	ResourceName      *string
 }
 
+func (p *AttachmentProc) Name() string { return "attachment" }
+
 func (p *AttachmentProc) IGNORE_MISSING(t bool) *AttachmentProc {
 	if p.IgnoreMissing != nil {
 		panic("multiple IGNORE_MISSING calls")
@@ -123,7 +125,7 @@ func (p *AttachmentProc) Render(dst io.Writer, notag bool) error {
 
 var attachmentTemplate = template.Must(template.New("attachment").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
-{{end}}- attachment:` +
+{{end}}- {{.Name}}:` +
 	preamble + `
     field: {{yaml_string .Field}}
 {{- with .TargetField}}

@@ -36,6 +36,8 @@ type SplitProc struct {
 	IgnoreMissing    *bool
 }
 
+func (p *SplitProc) Name() string { return "split" }
+
 func (p *SplitProc) PRESERVE_TRAILING(t bool) *SplitProc {
 	if p.PreserveTrailing != nil {
 		panic("multiple PRESERVE_TRAILING calls")
@@ -68,7 +70,7 @@ func (p *SplitProc) Render(dst io.Writer, notag bool) error {
 
 var splitTemplate = template.Must(template.New("split").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
-{{end}}- split:` +
+{{end}}- {{.Name}}:` +
 	preamble + `
     field: {{yaml_string .Field}}
     separator: {{yaml_string .Separator}}

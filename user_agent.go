@@ -37,6 +37,8 @@ type UserAgentProc struct {
 	Properties        []string
 }
 
+func (p *UserAgentProc) Name() string { return "user_agent" }
+
 func (p *UserAgentProc) IGNORE_MISSING(t bool) *UserAgentProc {
 	if p.IgnoreMissing != nil {
 		panic("multiple IGNORE_MISSING calls")
@@ -82,7 +84,7 @@ func (p *UserAgentProc) Render(dst io.Writer, notag bool) error {
 
 var userAgentTemplate = template.Must(template.New("user_agent").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
-{{end}}- user_agent:` +
+{{end}}- {{.Name}}:` +
 	preamble + `
     field: {{yaml_string .Field}}
 {{- with .TargetField}}

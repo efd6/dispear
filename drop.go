@@ -43,6 +43,8 @@ type StopProc struct {
 	Flavour string
 }
 
+func (p *StopProc) Name() string { return p.Flavour }
+
 func (p *StopProc) Render(dst io.Writer, notag bool) error {
 	oldNotag := p.parent.SemanticsOnly
 	p.parent.SemanticsOnly = notag

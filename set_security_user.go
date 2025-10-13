@@ -26,6 +26,8 @@ type SetSecurityUserProc struct {
 	Properties []string
 }
 
+func (p *SetSecurityUserProc) Name() string { return "set_security_user" }
+
 func (p *SetSecurityUserProc) PROPERTIES(s ...string) *SetSecurityUserProc {
 	if p.Properties != nil {
 		panic("multiple PROPERTIES calls")
@@ -47,7 +49,7 @@ func (p *SetSecurityUserProc) Render(dst io.Writer, notag bool) error {
 
 var setSecurityUserTemplate = template.Must(template.New("set_security_user").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
-{{end}}- set_security_user:` +
+{{end}}- {{.Name}}:` +
 	preamble + `
     field: {{yaml_string .Field}}
 {{- with .Properties}}

@@ -41,6 +41,8 @@ type CommunityIDProc struct {
 	IgnoreMissing   *bool
 }
 
+func (p *CommunityIDProc) Name() string { return "community_id" }
+
 func (p *CommunityIDProc) SOURCE_ID_FIELD(s string) *CommunityIDProc {
 	if p.SourceIP != nil {
 		panic("multiple SOURCE_ID_FIELD calls")
@@ -131,7 +133,7 @@ func (p *CommunityIDProc) Render(dst io.Writer, notag bool) error {
 
 var communityIDTemplate = template.Must(template.New("community_id").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
-{{end}}- community_id:` +
+{{end}}- {{.Name}}:` +
 	preamble + `
 {{- with .TargetField}}
     target_field: {{yaml_string .}}

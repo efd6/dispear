@@ -40,6 +40,8 @@ type KVProc struct {
 	TrimValue     *bool
 }
 
+func (p *KVProc) Name() string { return "kv" }
+
 func (p *KVProc) IGNORE_MISSING(t bool) *KVProc {
 	if p.IgnoreMissing != nil {
 		panic("multiple IGNORE_MISSING calls")
@@ -115,7 +117,7 @@ func (p *KVProc) Render(dst io.Writer, notag bool) error {
 
 var kvTemplate = template.Must(template.New("kv").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
-{{end}}- kv:` +
+{{end}}- {{.Name}}:` +
 	preamble + `
     field: {{yaml_string .Field}}
 {{- with .TargetField}}

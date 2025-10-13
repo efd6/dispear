@@ -37,6 +37,8 @@ type FingerprintProc struct {
 	IgnoreMissing *bool
 }
 
+func (p *FingerprintProc) Name() string { return "fingerprint" }
+
 func (p *FingerprintProc) METHOD(s string) *FingerprintProc {
 	if p.Method != nil {
 		panic("multiple METHOD calls")
@@ -77,7 +79,7 @@ func (p *FingerprintProc) Render(dst io.Writer, notag bool) error {
 
 var fingerprintTemplate = template.Must(template.New("fingerprint").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
-{{end}}- fingerprint:` +
+{{end}}- {{.Name}}:` +
 	preamble + `
 {{- with .Fields}}
     fields:{{range .}}

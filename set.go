@@ -30,6 +30,8 @@ type SetProc struct {
 	IgnoreEmpty *bool
 }
 
+func (p *SetProc) Name() string { return "set" }
+
 func (p *SetProc) IGNORE_EMPTY(t bool) *SetProc {
 	if p.IgnoreEmpty != nil {
 		panic("multiple IGNORE_EMPTY calls")
@@ -86,7 +88,7 @@ func (p *SetProc) Render(dst io.Writer, notag bool) error {
 
 var setTemplate = template.Must(template.New("set").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
-{{end}}- set:` +
+{{end}}- {{.Name}}:` +
 	preamble + `
     field: {{yaml_string .Field}}
 {{- with .Value}}

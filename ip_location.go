@@ -60,6 +60,8 @@ type IPLocationProc struct {
 	Properties                 []string
 }
 
+func (p *IPLocationProc) Name() string { return p.Flavour }
+
 func (p *IPLocationProc) IGNORE_MISSING(t bool) *IPLocationProc {
 	if p.IgnoreMissing != nil {
 		panic("multiple IGNORE_MISSING calls")

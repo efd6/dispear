@@ -34,6 +34,8 @@ type TrimProc struct {
 	IgnoreMissing *bool
 }
 
+func (p *TrimProc) Name() string { return "trim" }
+
 func (p *TrimProc) IGNORE_MISSING(t bool) *TrimProc {
 	if p.IgnoreMissing != nil {
 		panic("multiple IGNORE_MISSING calls")
@@ -55,7 +57,7 @@ func (p *TrimProc) Render(dst io.Writer, notag bool) error {
 
 var trimTemplate = template.Must(template.New("trim").Funcs(templateHelpers).Parse(`
 {{with .Comment}}{{comment .}}
-{{end}}- trim:` +
+{{end}}- {{.Name}}:` +
 	preamble + `
     field: {{yaml_string .Field}}
 {{- with .TargetField}}
