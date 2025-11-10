@@ -73,9 +73,10 @@ func (c *Context) Add(p Renderer) {
 	}
 }
 
+var out = flag.String("out", "", "path for writing generated pipeline to (stdout if empty)")
+
 func (c *Context) Generate() error {
 	w := os.Stdout
-	out := flag.String("out", "", "path for writing generated pipeline to (stdout if empty)")
 	flag.Parse()
 	if *out != "" {
 		f, err := os.Create(*out)
