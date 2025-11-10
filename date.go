@@ -73,7 +73,8 @@ func (p *DateProc) Render(dst io.Writer) error {
 {{end}}- date:` +
 		preamble + `
     field: {{yaml_string .Field}}
-{{- with .TargetField}}    target_field: {{yaml_string .}}
+{{- with .TargetField}}
+    target_field: {{yaml_string .}}
 {{- end -}}
 {{- with .Formats}}
     formats:{{range .}}

@@ -58,12 +58,16 @@ func (p *RemoveProc) Render(dst io.Writer) error {
 {{with .Comment}}{{comment .}}
 {{end}}- remove:` +
 		preamble + `
-{{- with .Fields}}
-    field:{{range .}}
+{{- if eq (len .Fields) 1}}
+    field: {{index .Fields 0}}
+{{- else if gt (len .Fields) 1}}
+    field:{{range .Fields}}
       - {{yaml_string .}}{{end}}
 {{- end -}}
-{{- with .Keep}}
-    keep:{{range .}}
+{{- if eq (len .Keep) 1}}
+    keep: {{index .Keep 0}}
+{{- else if gt (len .Keep) 1}}
+    keep:{{range .Keep}}
       - {{yaml_string .}}{{end}}
 {{- end -}}
 {{- with .IgnoreMissing}}
