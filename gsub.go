@@ -67,10 +67,8 @@ var gsubTemplate = template.Must(template.New("gsub").Funcs(templateHelpers).Par
 {{- end -}}
 {{- with .Pattern}}
     pattern: {{yaml_string .}}
-{{- end -}}
-{{- with .Replacement}}
-    replacement: {{yaml_string .}}
-{{- end -}}
+{{- end}}
+    replacement: {{yaml_string .Replacement}}
 {{- with .IgnoreMissing}}
     ignore_missing: {{.}}
 {{- end -}}` +
