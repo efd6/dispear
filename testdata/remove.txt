@@ -11,6 +11,7 @@ import . "github.com/efd6/dispear"
 func main() {
 	DESCRIPTION("remove")
 
+	REMOVE("field1")
 	REMOVE("field1", "field2")
 	REMOVE("field1", "field2").KEEP("field3", "field4")
 	REMOVE().KEEP("field3", "field4")
@@ -21,6 +22,10 @@ func main() {
 ---
 description: remove
 processors:
+  - remove:
+      tag: remove_field1_2a7f3b36
+      field:
+        - field1
   - remove:
       tag: remove_bf50c7f6
       field:

@@ -1322,7 +1322,7 @@ processors:
       ignore_missing: true
       on_failure:
         - remove:
-            tag: remove_345480b0
+            tag: remove_ocsf_activity_name_345480b0
             field:
               - ocsf.activity_name
             ignore_missing: true
@@ -1338,7 +1338,7 @@ processors:
       ignore_missing: true
       on_failure:
         - remove:
-            tag: remove_1f3d1aff
+            tag: remove_event_action_1f3d1aff
             field:
               - event.action
             ignore_missing: true
@@ -1358,7 +1358,7 @@ processors:
       ignore_missing: true
       on_failure:
         - remove:
-            tag: remove_0585db02
+            tag: remove_ocsf_duration_0585db02
             field:
               - ocsf.duration
             ignore_missing: true
@@ -1394,7 +1394,7 @@ processors:
       ignore_missing: true
       on_failure:
         - remove:
-            tag: remove_ba130fcc
+            tag: remove_ocsf_metadata_sequence_ba130fcc
             field:
               - ocsf.metadata.sequence
             ignore_missing: true
@@ -1449,7 +1449,7 @@ processors:
       ignore_missing: true
       on_failure:
         - remove:
-            tag: remove_5c3c33a8
+            tag: remove_ocsf_api_response_code_5c3c33a8
             field:
               - ocsf.api.response.code
             ignore_missing: true
@@ -1464,7 +1464,7 @@ processors:
       ignore_missing: true
       on_failure:
         - remove:
-            tag: remove_6a4b8b82
+            tag: remove_ocsf_count_6a4b8b82
             field:
               - ocsf.count
             ignore_missing: true
@@ -1481,7 +1481,7 @@ processors:
         - ISO8601
       on_failure:
         - remove:
-            tag: remove_e42de4bc
+            tag: remove_ocsf_end_time_dt_e42de4bc
             field:
               - ocsf.end_time_dt
             ignore_missing: true
@@ -1503,7 +1503,7 @@ processors:
         - UNIX_MS
       on_failure:
         - remove:
-            tag: remove_5f9ae4da
+            tag: remove_ocsf_end_time_5f9ae4da
             field:
               - ocsf.end_time
             ignore_missing: true
@@ -1524,7 +1524,7 @@ processors:
         - ISO8601
       on_failure:
         - remove:
-            tag: remove_031b4ef3
+            tag: remove_ocsf_time_dt_031b4ef3
             field:
               - ocsf.time_dt
             ignore_missing: true
@@ -1540,7 +1540,7 @@ processors:
         - UNIX_MS
       on_failure:
         - remove:
-            tag: remove_4e7b4b2d
+            tag: remove_ocsf_time_dt_4e7b4b2d
             field:
               - ocsf.time_dt
             ignore_missing: true
@@ -1557,7 +1557,7 @@ processors:
         - ISO8601
       on_failure:
         - remove:
-            tag: remove_5cbedb7e
+            tag: remove_ocsf_time_dt_5cbedb7e
             field:
               - ocsf.time_dt
             ignore_missing: true
@@ -1574,7 +1574,7 @@ processors:
         - UNIX_MS
       on_failure:
         - remove:
-            tag: remove_c9e6562d
+            tag: remove_ocsf_time_dt_c9e6562d
             field:
               - ocsf.time_dt
             ignore_missing: true
@@ -1591,7 +1591,7 @@ processors:
         - ISO8601
       on_failure:
         - remove:
-            tag: remove_21c155ed
+            tag: remove_ocsf_time_dt_21c155ed
             field:
               - ocsf.time_dt
             ignore_missing: true
@@ -1608,7 +1608,7 @@ processors:
         - UNIX_MS
       on_failure:
         - remove:
-            tag: remove_da584bdc
+            tag: remove_ocsf_time_dt_da584bdc
             field:
               - ocsf.time_dt
             ignore_missing: true
@@ -1625,7 +1625,7 @@ processors:
         - ISO8601
       on_failure:
         - remove:
-            tag: remove_b1a38505
+            tag: remove_ocsf_time_dt_b1a38505
             field:
               - ocsf.time_dt
             ignore_missing: true
@@ -1642,7 +1642,7 @@ processors:
         - UNIX_MS
       on_failure:
         - remove:
-            tag: remove_d1d644c8
+            tag: remove_ocsf_time_dt_d1d644c8
             field:
               - ocsf.time_dt
             ignore_missing: true
@@ -1659,7 +1659,7 @@ processors:
         - ISO8601
       on_failure:
         - remove:
-            tag: remove_12f897a9
+            tag: remove_ocsf_time_dt_12f897a9
             field:
               - ocsf.time_dt
             ignore_missing: true
@@ -1676,7 +1676,7 @@ processors:
         - UNIX_MS
       on_failure:
         - remove:
-            tag: remove_fad74b66
+            tag: remove_ocsf_time_dt_fad74b66
             field:
               - ocsf.time_dt
             ignore_missing: true
@@ -1696,7 +1696,7 @@ processors:
           ignore_missing: true
           on_failure:
             - remove:
-                tag: remove_21558d70
+                tag: remove__ingest__value_reputation_base_score_21558d70
                 field:
                   - _ingest._value.reputation.base_score
                 ignore_missing: true
@@ -1734,7 +1734,7 @@ processors:
       ignore_missing: true
       on_failure:
         - remove:
-            tag: remove_aab64126
+            tag: remove_ocsf_severity_id_aab64126
             field:
               - ocsf.severity_id
             ignore_missing: true
@@ -1756,7 +1756,7 @@ processors:
         - ISO8601
       on_failure:
         - remove:
-            tag: remove_f8bddf0f
+            tag: remove_ocsf_start_time_dt_f8bddf0f
             field:
               - ocsf.start_time_dt
             ignore_missing: true
@@ -1778,7 +1778,7 @@ processors:
         - UNIX_MS
       on_failure:
         - remove:
-            tag: remove_3654e0bf
+            tag: remove_ocsf_start_time_3654e0bf
             field:
               - ocsf.start_time
             ignore_missing: true
@@ -1818,7 +1818,7 @@ processors:
       ignore_missing: true
       on_failure:
         - remove:
-            tag: remove_37303eb2
+            tag: remove_ocsf_timezone_offset_37303eb2
             field:
               - ocsf.timezone_offset
             ignore_missing: true
@@ -2118,7 +2118,7 @@ processors:
             - _ingest._value.uid
       ignore_failure: true
   - remove:
-      tag: remove_fd77e56f
+      tag: remove_aws_fd77e56f
       field:
         - aws
       ignore_missing: true
@@ -2493,7 +2493,7 @@ processors:
           ignore_missing: true
           on_failure:
             - remove:
-                tag: remove_c874a97e
+                tag: remove__ingest__value_c874a97e
                 field:
                   - _ingest._value
                 ignore_missing: true
@@ -2514,7 +2514,7 @@ processors:
           ignore_missing: true
           on_failure:
             - remove:
-                tag: remove_429f96f5
+                tag: remove__ingest__value_429f96f5
                 field:
                   - _ingest._value
                 ignore_missing: true

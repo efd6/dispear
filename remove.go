@@ -14,6 +14,9 @@ func REMOVE(fields ...string) *RemoveProc {
 	p := &RemoveProc{Fields: fields}
 	p.recDecl()
 	p.Tag = "remove"
+	if len(fields) == 1 {
+		p.Tag += "_" + PathCleaner.Replace(fields[0])
+	}
 	p.template = removeTemplate
 	p.parent = p
 	ctx.Add(p)
