@@ -96,6 +96,7 @@ func (c *Context) Generate() error {
 	}
 	// Ensure no collisions.
 	var maxCollisions int
+	collisions := make(map[string]int)
 	for {
 		tags := make(map[string][]*semantic)
 		for _, r := range c.tags {
@@ -119,6 +120,7 @@ func (c *Context) Generate() error {
 				r.collision += j + 1
 				if r.collision > maxCollisions {
 					maxCollisions = r.collision
+					collisions[string(r.data)] = r.collision
 				}
 			}
 		}
@@ -134,6 +136,9 @@ func (c *Context) Generate() error {
 	}
 	if maxCollisions != 0 {
 		log.Printf("hash collisions in original semantics (max=%d)", maxCollisions)
+		for p, n := range collisions {
+			log.Printf("%s: %d", p, n)
+		}
 	}
 
 	var buf bytes.Buffer
